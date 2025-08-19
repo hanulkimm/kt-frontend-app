@@ -79,47 +79,46 @@ export const deleteSearchHistory = async (historyId, userId) => {
 };
 
 /**
- * 정류장 검색 (향후 구현 예정)
+ * 공공데이터 API를 통한 정류장 검색
  * @param {string} query - 검색어
  * @param {string} userId - 사용자 ID
  * @returns {Promise} API 응답
  */
 export const searchStations = async (query, userId) => {
-  // 현재는 더미 데이터 반환
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({
-        success: true,
-        data: [
-          {
-            id: '23001',
-            name: '강남역',
-            number: '23001',
-            distance: '120m',
-            latitude: 37.498095,
-            longitude: 127.027610
-          },
-          {
-            id: '23045',
-            name: '역삼역.한국지식재산센터',
-            number: '23045',
-            distance: '350m',
-            latitude: 37.500773,
-            longitude: 127.035567
-          },
-          {
-            id: '12345',
-            name: '대학역(중)',
-            number: '12345',
-            distance: '500m',
-            latitude: 37.502345,
-            longitude: 127.040123
-          }
-        ],
-        message: '검색이 완료되었습니다.'
-      });
-    }, 500);
-  });
+  try {
+    // 클라이언트 사이드에서는 환경변수를 직접 사용할 수 없으므로 API 라우트를 통해 호출
+    const response = await fetch('/api/search/stations', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        keyword: query,
+        userId: userId
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    if (data.success) {
+      return data;
+    } else {
+      throw new Error(data.message || '검색 결과를 가져올 수 없습니다.');
+    }
+  } catch (error) {
+    console.error('정류장 검색 API 오류:', error);
+    
+    throw {
+      success: false,
+      message: error.message || '정류장 검색에 실패했습니다. 네트워크 연결을 확인해주세요.',
+      data: null
+    };
+  }
 };
 
 /**

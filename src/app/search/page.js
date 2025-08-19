@@ -4,16 +4,11 @@ import { useState, useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
 import SearchBar from '../../components/search/SearchBar';
 import SearchHistory from '../../components/search/SearchHistory';
-import SearchResultItem from '../../components/search/SearchResultItem';
-import { searchStations } from '../../services/search';
 import { getBookmarkedStations } from '../../services/bookmarks';
 import toast from 'react-hot-toast';
 
 export default function SearchPage() {
-  const [searchResults, setSearchResults] = useState([]);
   const [bookmarkedStations, setBookmarkedStations] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [hasSearched, setHasSearched] = useState(false);
 
   useEffect(() => {
     // 컴포넌트 마운트 시 userId 설정 (실제 앱에서는 로그인 시 설정)
@@ -71,27 +66,9 @@ export default function SearchPage() {
   const handleSearch = async (query) => {
     if (!query.trim()) return;
 
-    try {
-      setLoading(true);
-      setHasSearched(true);
-      
-      const response = await searchStations(query, localStorage.getItem('userId'));
-      if (response.success) {
-        setSearchResults(response.data || []);
-        if (response.data?.length === 0) {
-          toast.error('검색 결과가 없습니다.');
-        }
-      } else {
-        toast.error(response.message);
-        setSearchResults([]);
-      }
-    } catch (error) {
-      console.error('검색 실패:', error);
-      toast.error(error.message || '검색에 실패했습니다.');
-      setSearchResults([]);
-    } finally {
-      setLoading(false);
-    }
+    // 검색 결과 페이지로 이동
+    const searchParams = new URLSearchParams({ q: query.trim() });
+    window.location.href = `/search/stations?${searchParams.toString()}`;
   };
 
   const handleHistoryClick = (query) => {
@@ -147,36 +124,7 @@ export default function SearchPage() {
           <SearchBar onSearch={handleSearch} />
         </div>
 
-        {/* 검색 결과 */}
-        {hasSearched && (
-          <div className="mb-8">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">검색 결과</h3>
-            
-            {loading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="animate-pulse">
-                    <div className="h-20 bg-gray-200 rounded-lg"></div>
-                  </div>
-                ))}
-              </div>
-            ) : searchResults.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <p>검색 결과가 없습니다.</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {searchResults.map((station) => (
-                  <SearchResultItem
-                    key={station.id}
-                    station={station}
-                    showBookmarkButton={true}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+
 
         {/* 하단 섹션들 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
