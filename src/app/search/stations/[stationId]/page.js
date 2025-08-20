@@ -186,7 +186,13 @@ function StationDetailContent() {
       const response = await getReviewsByTarget(stationId, 'station');
       
       if (response.success) {
-        setReviews(response.data || []);
+        const reviews = response.data || [];
+        // station_name 필드가 없는 경우 현재 정류장 정보로 보완
+        const processedReviews = reviews.map(review => ({
+          ...review,
+          stationName: review.stationName || review.station_name || stationInfo?.stationName || stationInfo?.name || `정류장 ${stationId}`
+        }));
+        setReviews(processedReviews);
       } else {
         console.error('리뷰 로드 실패:', response.message);
         setReviews([]);
@@ -214,6 +220,7 @@ function StationDetailContent() {
         userId: parseInt(userId),
         targetKind: 'station',
         targetId: stationId,
+        stationName: stationInfo?.stationName || stationInfo?.name || `정류장 ${stationId}`,
         rating: reviewForm.rating,
         content: reviewForm.content,
         routeNumber: reviewForm.routeNumber || null

@@ -3,9 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Toaster } from 'react-hot-toast';
+import { FiBell } from 'react-icons/fi';
 import SearchBar from '../../components/search/SearchBar';
 import SearchHistory from '../../components/search/SearchHistory';
 import { getBookmarkedStations, getBookmarkedRoutes } from '../../services/bookmarks';
+import { getUnreadNotificationCount } from '../../services/notifications';
 import { addSearchHistory } from '../../services/search';
 import toast from 'react-hot-toast';
 
@@ -16,6 +18,7 @@ export default function SearchPage() {
   const [userEmail, setUserEmail] = useState('');
   const [bookmarksLoading, setBookmarksLoading] = useState(true);
   const [routesLoading, setRoutesLoading] = useState(true);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
 
   // 한글 디코딩 유틸리티 함수
   const decodeKoreanText = (text) => {
@@ -52,10 +55,11 @@ export default function SearchPage() {
       return true;
     };
 
-             if (checkAuthStatus()) {
-           loadBookmarkedStations();
-           loadBookmarkedRoutes();
-         }
+                     if (checkAuthStatus()) {
+          loadBookmarkedStations();
+          loadBookmarkedRoutes();
+          loadUnreadNotificationCount();
+        }
   }, [router]);
 
   const loadBookmarkedStations = async () => {
@@ -163,6 +167,26 @@ export default function SearchPage() {
     }
   };
 
+  const loadUnreadNotificationCount = async () => {
+    try {
+      const userId = localStorage.getItem('userId');
+      if (!userId) return;
+
+      const response = await getUnreadNotificationCount(parseInt(userId));
+      if (response.success) {
+        setUnreadNotificationCount(response.data || 0);
+      }
+    } catch (error) {
+      console.error('읽지 않은 알림 개수 로드 실패:', error);
+      // 404 오류인 경우 알림 기능이 아직 구현되지 않았을 수 있음
+      if (error.message && error.message.includes('404')) {
+        console.log('알림 기능이 아직 백엔드에서 구현되지 않았을 수 있습니다.');
+      }
+      // 오류가 발생해도 다른 기능에 영향을 주지 않도록 조용히 처리
+      setUnreadNotificationCount(0);
+    }
+  };
+
   const handleSearch = async (query) => {
     if (!query.trim()) return;
 
@@ -218,10 +242,21 @@ export default function SearchPage() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <button className="p-2 text-gray-600 hover:text-gray-900">
-                <span className="text-sm">알림</span>
+              <button 
+                onClick={() => router.push('/notifications')}
+                className="relative p-2 text-gray-600 hover:text-gray-900 transition-colors duration-200"
+              >
+                <div className="flex items-center gap-1">
+                  <FiBell className="w-4 h-4" />
+                  <span className="text-sm">알림</span>
+                </div>
+                {unreadNotificationCount > 0 && (
+                  <span className="absolute -top-1 -right-1 px-1.5 py-0.5 bg-red-500 text-white text-xs rounded-full min-w-[18px] text-center">
+                    {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+                  </span>
+                )}
               </button>
-                                            <button 
+              <button 
                 onClick={() => router.push('/mypage')}
                 className="p-2 text-gray-600 hover:text-gray-900"
               >

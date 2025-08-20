@@ -144,7 +144,8 @@ const MyPage = () => {
         const processedReviews = reviews.map(review => ({
           ...review,
           content: decodeKoreanText(review.content),
-          stationName: decodeKoreanText(review.stationName)
+          stationName: decodeKoreanText(review.stationName || review.station_name),
+          stationId: review.stationId || review.targetId
         }));
         
         setMyReviews(processedReviews);
@@ -178,6 +179,12 @@ const MyPage = () => {
   const handleStationClick = (station) => {
     const stationId = station.stationId || station.targetId || station.id;
     const stationName = station.stationName || station.name || '정류장';
+    
+    if (!stationId) {
+      toast.error('정류장 ID를 찾을 수 없습니다.');
+      return;
+    }
+    
     const encodedStationName = encodeURIComponent(stationName);
     window.location.href = `/search/stations/${stationId}?name=${encodedStationName}`;
   };
@@ -267,7 +274,9 @@ const MyPage = () => {
       const response = await updateReview(editingReview.id, {
         content: editContent.trim(),
         rating: editRating,
-        userId: userId
+        userId: userId,
+        stationName: editingReview.stationName || editingReview.station_name || '정류장명 없음',
+        targetId: editingReview.stationId || editingReview.targetId
       });
 
       if (response.success) {
@@ -635,7 +644,7 @@ const MyPage = () => {
                         key={review.id} 
                         className="p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow duration-200 cursor-pointer"
                         onClick={() => handleStationClick({ 
-                          stationId: review.stationId, 
+                          stationId: review.stationId || review.targetId, 
                           stationName: review.stationName 
                         })}
                       >
@@ -661,14 +670,14 @@ const MyPage = () => {
                                 ))}
                               </div>
                             </div>
-                            <textarea
-                              value={editContent}
-                              onChange={(e) => setEditContent(e.target.value)}
-                              onClick={(e) => e.stopPropagation()}
-                              className="w-full p-2 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                              rows={3}
-                              placeholder="리뷰 내용을 입력하세요"
-                            />
+                                                         <textarea
+                               value={editContent}
+                               onChange={(e) => setEditContent(e.target.value)}
+                               onClick={(e) => e.stopPropagation()}
+                               className="w-full p-2 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-black placeholder-gray-500"
+                               rows={3}
+                               placeholder="리뷰 내용을 입력하세요"
+                             />
                             <div className="flex items-center justify-between">
                               <span className="text-sm text-gray-500">
                                 {formatDate(review.createdAt || review.updatedAt)}
