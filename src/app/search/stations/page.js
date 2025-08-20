@@ -244,7 +244,7 @@ function StationsPageContent() {
                   <KakaoMap
                     stations={stations}
                     onStationClick={handleMapStationClick}
-                    className="h-96 lg:h-[500px] w-full border border-gray-200 shadow-sm"
+                    className="h-[500px] lg:h-[600px] w-full border border-gray-200 shadow-sm"
                   />
                 </div>
               </div>

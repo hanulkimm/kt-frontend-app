@@ -104,7 +104,7 @@ const SearchResultItem = ({ station, showBookmarkButton = true, onClick }) => {
       </div>
 
       {/* 카카오맵 미니맵 */}
-      <div className="w-32 h-24 flex-shrink-0">
+      <div className="w-40 h-32 flex-shrink-0">
         <StationMiniMap 
           station={station}
           className="w-full h-full border border-gray-200 rounded-lg shadow-sm"

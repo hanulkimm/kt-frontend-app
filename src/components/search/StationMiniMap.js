@@ -138,7 +138,7 @@ const StationMiniMap = ({ station, className = "" }) => {
     try {
       const mapOption = {
         center: new window.kakao.maps.LatLng(station.latitude, station.longitude),
-        level: 4, // 미니맵이므로 적당한 확대 레벨
+        level: 5, // 미니맵이므로 약간 넓은 시야로 조정
         draggable: false, // 드래그 비활성화
         zoomable: false, // 줌 비활성화
         disableDoubleClick: true, // 더블클릭 줌 비활성화

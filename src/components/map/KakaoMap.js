@@ -68,7 +68,7 @@ const KakaoMap = ({ stations = [], center, onStationClick, className = "" }) => 
 
     const mapOption = {
       center: new window.kakao.maps.LatLng(defaultCenter.lat, defaultCenter.lng),
-      level: stations.length > 1 ? 5 : 3, // 여러 정류장이 있으면 더 넓게
+      level: stations.length > 1 ? 6 : 4, // 여러 정류장이 있으면 더 넓게, 단일 정류장도 약간 넓게
     };
 
     const map = new window.kakao.maps.Map(mapRef.current, mapOption);
@@ -98,12 +98,12 @@ const KakaoMap = ({ stations = [], center, onStationClick, className = "" }) => 
     stations.forEach((station, index) => {
       const position = new window.kakao.maps.LatLng(station.latitude, station.longitude);
       
-      // 마커 이미지 설정 (중앙차로는 빨간색, 일반차로는 파란색)
+      // 마커 이미지 설정 (중앙차로는 빨간색, 일반차로는 파란색) - 더 크고 선명하게
       const imageSrc = station.centerYn === 'Y' 
         ? 'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_red.png'
-        : 'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_number_blue.png';
+        : 'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png';
       
-      const imageSize = new window.kakao.maps.Size(36, 37);
+      const imageSize = new window.kakao.maps.Size(48, 55); // 기존 36x37에서 48x55로 크게
       const markerImage = new window.kakao.maps.MarkerImage(imageSrc, imageSize);
 
       // 마커 생성
@@ -116,13 +116,14 @@ const KakaoMap = ({ stations = [], center, onStationClick, className = "" }) => 
       marker.setMap(mapInstanceRef.current);
       newMarkers.push(marker);
 
-      // 인포윈도우 생성
+      // 인포윈도우 생성 - 더 보기 좋게 개선
       const infowindowContent = `
-        <div style="padding:8px; min-width:150px; font-size:12px;">
-          <div style="font-weight:bold; margin-bottom:4px;">${station.name}</div>
-          <div style="color:#666;">
-            정류장번호: ${station.number}<br/>
-            ${station.distance} | ${station.regionName}
+        <div style="padding:12px; min-width:180px; font-size:13px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+          <div style="font-weight:600; margin-bottom:6px; color:#1f2937; font-size:14px;">${station.name}</div>
+          <div style="color:#6b7280; line-height:1.4;">
+            <div style="margin-bottom:2px;">🚏 정류장번호: <span style="color:#3b82f6; font-weight:500;">${station.number}</span></div>
+            <div style="margin-bottom:2px;">📍 ${station.distance}</div>
+            <div>🏘️ ${station.regionName}</div>
           </div>
         </div>
       `;
@@ -186,22 +187,26 @@ const KakaoMap = ({ stations = [], center, onStationClick, className = "" }) => 
     <div className={`relative ${className}`}>
       <div ref={mapRef} className="w-full h-full rounded-lg"></div>
       
-      {/* 지도 범례 */}
-      <div className="absolute top-4 left-4 bg-white rounded-lg shadow-md p-3 text-xs">
-        <div className="flex items-center gap-2 mb-1">
-          <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-          <span>중앙차로</span>
+      {/* 지도 범례 - 더 눈에 잘 보이게 */}
+      <div className="absolute top-4 left-4 bg-white rounded-lg shadow-lg border border-gray-200 p-4 text-sm">
+        <div className="font-medium text-gray-700 mb-2">마커 구분</div>
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-4 h-4 bg-red-500 rounded-full shadow-sm"></div>
+          <span className="text-gray-600">중앙차로</span>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-          <span>일반차로</span>
+        <div className="flex items-center gap-3">
+          <div className="w-4 h-4 bg-blue-500 rounded-full shadow-sm"></div>
+          <span className="text-gray-600">일반차로</span>
         </div>
       </div>
 
-      {/* 정류장 개수 표시 */}
+      {/* 정류장 개수 표시 - 더 보기 좋게 */}
       {stations.length > 0 && (
-        <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-md px-3 py-2 text-sm">
-          총 {stations.length}개 정류장
+        <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-lg border border-gray-200 px-4 py-3 text-sm">
+          <div className="flex items-center gap-2">
+            <span className="text-emerald-600 font-medium">📍</span>
+            <span className="text-gray-700 font-medium">총 {stations.length}개 정류장</span>
+          </div>
         </div>
       )}
     </div>
