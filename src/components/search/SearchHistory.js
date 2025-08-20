@@ -156,35 +156,35 @@ const SearchHistory = ({ onHistoryClick }) => {
            <p className="text-xs mt-1">검색을 해보세요!</p>
          </div>
        ) : (
-                 <div className="space-y-2">
-           {Array.isArray(history) && history.map((item, index) => {
-             console.log('🔍 렌더링 중인 아이템:', item, 'index:', index);
-             return (
-               <div
-                 key={item?.id || index}
-                 onClick={() => handleHistoryClick(item?.keyword || '')}
-                 className="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors duration-200"
-               >
-                 <div className="flex items-center gap-3">
-                   <div className="w-6 h-6 bg-emerald-500 text-white rounded text-center text-sm font-medium flex items-center justify-center">
-                     {index + 1}
-                   </div>
-                                    <span className="text-gray-900 font-medium">{item?.keyword || '검색어 없음'}</span>
-               </div>
-               <div className="flex items-center gap-2">
-                 <span className="text-sm text-gray-500">{item?.searchedAt ? formatTime(item.searchedAt) : '시간 없음'}</span>
-                   <button
-                     onClick={(e) => handleDeleteHistory(item?.id || 0, e)}
-                     className="p-1 text-gray-400 hover:text-red-500 transition-colors duration-200"
-                     title="삭제"
-                   >
-                     <FiX className="w-4 h-4" />
-                   </button>
-                 </div>
-               </div>
-             );
-           })}
-         </div>
+        <div className="max-h-36 overflow-y-auto space-y-2 pr-2">
+          {Array.isArray(history) && history.map((item, index) => {
+            console.log('🔍 렌더링 중인 아이템:', item, 'index:', index);
+            return (
+              <div
+                key={item?.id || index}
+                onClick={() => handleHistoryClick(item?.keyword || '')}
+                className="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors duration-200"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-6 h-6 bg-emerald-500 text-white rounded text-center text-sm font-medium flex items-center justify-center">
+                    {index + 1}
+                  </div>
+                  <span className="text-gray-900 font-medium">{item?.keyword || '검색어 없음'}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-500">{item?.searchedAt ? formatTime(item.searchedAt) : '시간 없음'}</span>
+                  <button
+                    onClick={(e) => handleDeleteHistory(item?.id || 0, e)}
+                    className="p-1 text-gray-400 hover:text-red-500 transition-colors duration-200"
+                    title="삭제"
+                  >
+                    <FiX className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
     </div>
   );
