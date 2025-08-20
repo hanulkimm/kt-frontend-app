@@ -103,7 +103,7 @@ const KakaoMap = ({ stations = [], center, onStationClick, className = "" }) => 
         ? 'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_red.png'
         : 'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png';
       
-      const imageSize = new window.kakao.maps.Size(48, 55); // 기존 36x37에서 48x55로 크게
+      const imageSize = new window.kakao.maps.Size(42, 48); // 적당한 크기로 조정
       const markerImage = new window.kakao.maps.MarkerImage(imageSrc, imageSize);
 
       // 마커 생성
