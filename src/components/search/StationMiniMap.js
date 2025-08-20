@@ -64,42 +64,60 @@ const StationMiniMap = ({ station, className = "" }) => {
       try {
         const script = document.createElement('script');
         script.type = 'text/javascript';
-        script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=597443c784bdb5f5124b2b9dee040922&autoload=false`;
+        // 공공데이터포탈 API와 동일한 방식으로 fallback 값 제공
+        const apiKey = process.env.NEXT_PUBLIC_KAKAO_MAP_API_KEY || 'd28aaa647ae5db8071669c2bd956f714';
         
+        console.log('🔑 StationMiniMap - 사용할 API 키:', apiKey);
+        
+        // 카카오맵 API 가이드에 따른 정확한 URL 형식
+        script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${apiKey}&autoload=false`;
+        console.log('🔍 StationMiniMap - 카카오맵 API 키 확인:', apiKey);
+        console.log('📡 StationMiniMap - 카카오맵 스크립트 URL:', script.src);
+        
+        // 스크립트 로드 성공 시
         script.onload = () => {
-          console.log('카카오맵 스크립트 로드 완료');
-          try {
+          console.log('✅ StationMiniMap - 카카오맵 스크립트 로드 완료');
+          
+          // kakao.maps.load() 호출로 지도 초기화
+          if (window.kakao && window.kakao.maps) {
             window.kakao.maps.load(() => {
-              console.log('카카오맵 초기화 완료');
+              console.log('✅ StationMiniMap - 카카오맵 초기화 완료');
               setIsMapLoaded(true);
               window.kakaoMapLoading = false;
             });
-          } catch (error) {
-            console.error('카카오맵 초기화 실패:', error);
+          } else {
+            console.error('❌ StationMiniMap - window.kakao.maps가 정의되지 않음');
             setMapError(true);
             window.kakaoMapLoading = false;
           }
         };
 
+        // 스크립트 로드 실패 시
         script.onerror = (error) => {
-          console.error('카카오맵 스크립트 로드 실패:', error);
+          console.error('❌ StationMiniMap - 카카오맵 스크립트 로드 실패');
+          console.error('❌ 에러 상세 정보:', {
+            message: error?.message || '알 수 없는 에러',
+            type: error?.type || 'script_error',
+            target: error?.target || 'script_element'
+          });
           setMapError(true);
           window.kakaoMapLoading = false;
         };
 
+        // 스크립트를 DOM에 추가
         document.head.appendChild(script);
         
-        // 타임아웃 설정 (15초)
+        // 타임아웃 설정 (10초로 단축)
         setTimeout(() => {
           if (!window.kakao || !window.kakao.maps) {
-            console.error('카카오맵 로드 타임아웃');
+            console.error('❌ StationMiniMap - 카카오맵 로드 타임아웃 (10초)');
             setMapError(true);
             window.kakaoMapLoading = false;
           }
-        }, 15000);
+        }, 10000);
         
       } catch (error) {
-        console.error('스크립트 추가 실패:', error);
+        console.error('❌ StationMiniMap - 스크립트 추가 실패:', error);
         setMapError(true);
         window.kakaoMapLoading = false;
       }

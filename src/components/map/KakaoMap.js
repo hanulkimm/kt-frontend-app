@@ -11,23 +11,45 @@ const KakaoMap = ({ stations = [], center, onStationClick, className = "" }) => 
   // 카카오맵 API 로드
   useEffect(() => {
     const loadKakaoMap = () => {
+      console.log('🔍 카카오맵 API 키 확인:', process.env.NEXT_PUBLIC_KAKAO_MAP_API_KEY);
+      
       if (window.kakao && window.kakao.maps) {
+        console.log('✅ 카카오맵 이미 로드됨');
         setIsMapLoaded(true);
         return;
       }
 
       const script = document.createElement('script');
       script.async = true;
-      script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_MAP_API_KEY}&autoload=false`;
+      // 공공데이터포탈 API와 동일한 방식으로 fallback 값 제공
+      const apiKey = process.env.NEXT_PUBLIC_KAKAO_MAP_API_KEY || 'd28aaa647ae5db8071669c2bd956f714';
+      
+      console.log('🔑 KakaoMap - 사용할 API 키:', apiKey);
+      
+      script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${apiKey}&autoload=false`;
+      console.log('📡 KakaoMap - 카카오맵 스크립트 URL:', script.src);
       
       script.onload = () => {
-        window.kakao.maps.load(() => {
-          setIsMapLoaded(true);
-        });
+        console.log('✅ KakaoMap - 카카오맵 스크립트 로드 완료');
+        
+        // kakao.maps.load() 호출로 지도 초기화
+        if (window.kakao && window.kakao.maps) {
+          window.kakao.maps.load(() => {
+            console.log('✅ KakaoMap - 카카오맵 초기화 완료');
+            setIsMapLoaded(true);
+          });
+        } else {
+          console.error('❌ KakaoMap - window.kakao.maps가 정의되지 않음');
+        }
       };
 
-      script.onerror = () => {
-        console.error('카카오맵 API 로드에 실패했습니다.');
+      script.onerror = (error) => {
+        console.error('❌ KakaoMap - 카카오맵 API 로드 실패');
+        console.error('❌ 에러 상세 정보:', {
+          message: error?.message || '알 수 없는 에러',
+          type: error?.type || 'script_error',
+          target: error?.target || 'script_element'
+        });
       };
 
       document.head.appendChild(script);
