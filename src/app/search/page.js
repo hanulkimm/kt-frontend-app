@@ -221,9 +221,12 @@ export default function SearchPage() {
               <button className="p-2 text-gray-600 hover:text-gray-900">
                 <span className="text-sm">알림</span>
               </button>
-                              <button className="p-2 text-gray-600 hover:text-gray-900">
-                  <span className="text-sm">마이페이지</span>
-                </button>
+                                            <button 
+                onClick={() => router.push('/mypage')}
+                className="p-2 text-gray-600 hover:text-gray-900"
+              >
+                <span className="text-sm">마이페이지</span>
+              </button>
                 <button 
                   onClick={handleLogout}
                   className="px-3 py-1 bg-gray-100 text-gray-700 rounded text-sm hover:bg-gray-200 transition-colors duration-200"

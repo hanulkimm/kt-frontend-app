@@ -57,6 +57,11 @@ export const getReviewsByUser = async (userId) => {
   }
 };
 
+// 내가 쓴 리뷰 조회 (getReviewsByUser의 별칭)
+export const getMyReviews = async (userId) => {
+  return getReviewsByUser(userId);
+};
+
 // 리뷰 작성
 export const createReview = async (reviewData) => {
   try {
