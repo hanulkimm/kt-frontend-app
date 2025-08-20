@@ -84,7 +84,7 @@ export default function LoginPage() {
       email: 'test1@example.com',
       password: 'password'
     });
-    toast.info('테스트 계정 정보가 입력되었습니다.');
+    toast.success('테스트 계정 정보가 입력되었습니다.');
   };
 
   return (
@@ -137,7 +137,7 @@ export default function LoginPage() {
                   value={formData.email}
                   onChange={handleInputChange}
                   placeholder="이메일을 입력하세요"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors duration-200"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors duration-200 text-black placeholder-gray-500"
                   required
                 />
               </div>
@@ -154,7 +154,7 @@ export default function LoginPage() {
                   value={formData.password}
                   onChange={handleInputChange}
                   placeholder="비밀번호를 입력하세요"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors duration-200"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors duration-200 text-black placeholder-gray-500"
                   required
                 />
               </div>
