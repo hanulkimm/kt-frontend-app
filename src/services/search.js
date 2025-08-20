@@ -43,31 +43,49 @@ searchAPI.interceptors.response.use(
  * @returns {Promise} API 응답
  */
 export const getSearchHistory = async (userId, limit = 5) => {
+  console.log('🔍 검색 기록 조회 시작 - userId:', userId, 'limit:', limit);
+  
   try {
     // userId 유효성 검사
     const userIdNum = parseInt(userId);
     if (isNaN(userIdNum) || !userId) {
-      console.error('유효하지 않은 userId:', userId);
+      console.error('❌ 유효하지 않은 userId:', userId);
       throw new Error('유효하지 않은 사용자 ID입니다.');
     }
     
+    const url = `http://localhost:8080/search/history?userId=${userIdNum}&limit=${limit}`;
+    console.log('📡 요청 URL:', url);
+    
     // 백엔드 API 직접 호출 - API 명세에 맞춰 수정
-    const response = await fetch(`http://localhost:8080/search/history?userId=${userIdNum}&limit=${limit}`, {
+    const response = await fetch(url, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json; charset=utf-8',
+        'Accept-Charset': 'utf-8'
       },
     });
     
+    console.log('📊 응답 상태:', response.status, response.statusText);
+    
     const result = await response.json();
+    console.log('📄 응답 데이터:', result);
+    console.log('📄 응답 데이터 상세:', {
+      success: result.success,
+      message: result.message,
+      dataLength: result.data?.length,
+      firstItem: result.data?.[0],
+      allData: result.data
+    });
     
     if (!response.ok) {
-      throw new Error(result.message || 'API 호출 실패');
+      throw new Error(result.message || `HTTP ${response.status}: API 호출 실패`);
     }
     
+    console.log('✅ 검색 기록 조회 성공:', result.data?.length || 0, '개');
     return result;
   } catch (error) {
-    console.error('검색 기록 조회 실패:', error);
+    console.error('🔥 검색 기록 조회 실패:', error);
     throw {
       success: false,
       message: error.message || '검색 기록을 불러오는데 실패했습니다.',
