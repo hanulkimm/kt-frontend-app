@@ -319,7 +319,12 @@ export default function SearchPage() {
                        </div>
                      </div>
                      <button 
-                       onClick={() => window.location.href = `/search/stations/${station.stationId || station.targetId || station.id}`}
+                       onClick={() => {
+                         const stationId = station.stationId || station.targetId || station.id;
+                         const stationName = station.stationName || station.name || '정류장';
+                         const encodedStationName = encodeURIComponent(stationName);
+                         window.location.href = `/search/stations/${stationId}?name=${encodedStationName}`;
+                       }}
                        className="text-gray-400 hover:text-gray-600 transition-colors duration-200"
                      >
                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

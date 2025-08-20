@@ -178,8 +178,8 @@ export const searchStations = async (query, userId) => {
 };
 
 /**
- * 검색 기록 추가 (향후 구현 예정)
- * @param {string} query - 검색어
+ * 검색 기록 추가 (중복 검색어 처리)
+ * @param {string} keyword - 검색어
  * @param {string} userId - 사용자 ID
  * @returns {Promise} API 응답
  */
@@ -192,14 +192,30 @@ export const addSearchHistory = async (keyword, userId) => {
       throw new Error('유효하지 않은 사용자 ID입니다.');
     }
     
-    // 백엔드 API 직접 호출 - API 명세에 맞춰 수정
+    // 먼저 기존 검색 기록을 조회하여 중복 검색어 확인
+    const existingHistory = await getSearchHistory(userId, 100); // 충분히 큰 수로 조회
+    
+    if (existingHistory.success && existingHistory.data) {
+      // 같은 검색어가 있는지 확인
+      const duplicateHistory = existingHistory.data.find(history => 
+        history.keyword === keyword
+      );
+      
+      if (duplicateHistory) {
+        // 같은 검색어가 있으면 기존 기록 삭제
+        console.log('중복 검색어 발견, 기존 기록 삭제:', duplicateHistory);
+        await deleteSearchHistory(duplicateHistory.id, userId);
+      }
+    }
+    
+    // 새로운 검색 기록 추가
     const response = await fetch('http://localhost:8080/search/history', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        userId: userIdNum, // 검증된 숫자
+        userId: userIdNum,
         keyword: keyword
       })
     });
@@ -210,6 +226,7 @@ export const addSearchHistory = async (keyword, userId) => {
       throw new Error(result.message || 'API 호출 실패');
     }
     
+    console.log('검색 기록 추가 성공:', keyword);
     return result;
   } catch (error) {
     console.error('검색 기록 저장 실패:', error);

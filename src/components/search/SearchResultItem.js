@@ -68,8 +68,9 @@ const SearchResultItem = ({ station, showBookmarkButton = true, onClick }) => {
   };
 
   const handleStationClick = () => {
-    // 항상 정류장 상세 페이지로 이동
-    window.location.href = `/search/stations/${station.id}`;
+    // 정류장 상세 페이지로 이동하면서 정류장 이름도 함께 전달
+    const stationName = encodeURIComponent(station.name || station.stationName || '');
+    window.location.href = `/search/stations/${station.id}?name=${stationName}`;
   };
 
   return (

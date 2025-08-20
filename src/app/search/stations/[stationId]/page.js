@@ -1,19 +1,22 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Toaster } from 'react-hot-toast';
 import { FiArrowLeft, FiMapPin, FiRefreshCw, FiClock, FiHeart, FiStar, FiMessageSquare, FiPlus } from 'react-icons/fi';
 import BusArrivalItem from '../../../../components/bus/BusArrivalItem';
 import { getBusArrivalInfo } from '../../../../services/busArrival';
 import { addStationBookmark, removeStationBookmark, checkBookmarkStatus } from '../../../../services/bookmarks';
 import { getReviewsByTarget, createReview } from '../../../../services/reviews';
+import { searchStations } from '../../../../services/search';
 import toast from 'react-hot-toast';
 
 function StationDetailContent() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const stationId = params.stationId;
+  const stationNameFromUrl = searchParams.get('name');
   
   const [busArrivals, setBusArrivals] = useState([]);
   const [stationInfo, setStationInfo] = useState(null);
@@ -37,8 +40,11 @@ function StationDetailContent() {
 
   useEffect(() => {
     if (stationId) {
+      loadStationInfo();
       loadBusArrivalInfo();
       checkBookmark();
+      // 리뷰 개수도 초기 로드 시 함께 가져오기
+      loadReviews();
     }
   }, [stationId]);
 
@@ -77,6 +83,69 @@ function StationDetailContent() {
     };
   }, []);
 
+    // 정류장 정보 로드
+  const loadStationInfo = async () => {
+    try {
+      // URL에서 전달된 정류장 이름이 있으면 우선 사용
+      if (stationNameFromUrl) {
+        const decodedStationName = decodeURIComponent(stationNameFromUrl);
+        console.log('URL에서 정류장 이름 받음:', decodedStationName);
+        setStationInfo({
+          stationId: stationId,
+          stationName: decodedStationName,
+          stationNumber: stationId
+        });
+        return;
+      }
+
+      const userId = localStorage.getItem('userId');
+      if (!userId) {
+        // 로그인하지 않은 경우 기본 정보만 설정
+        setStationInfo({
+          stationId: stationId,
+          stationName: `정류장 ${stationId}`,
+          stationNumber: stationId
+        });
+        return;
+      }
+
+      // 정류장 ID로 검색하여 정류장 이름 가져오기 (백업)
+      const response = await searchStations(stationId, userId);
+      console.log('정류장 검색 응답:', response);
+      
+      if (response.success && response.data && response.data.length > 0) {
+        // 정류장 ID와 정확히 일치하는 정류장 찾기
+        const exactMatch = response.data.find(station => 
+          station.id === stationId || station.stationId === stationId
+        );
+        
+        const station = exactMatch || response.data[0]; // 정확한 매칭 또는 첫 번째 결과
+        console.log('정류장 정보 조회 성공:', station);
+        
+        setStationInfo({
+          stationId: stationId,
+          stationName: station.name || station.stationName || station.stnNm || `정류장 ${stationId}`,
+          stationNumber: stationId
+        });
+      } else {
+        // 검색 결과가 없는 경우 기본 정보 설정
+        setStationInfo({
+          stationId: stationId,
+          stationName: `정류장 ${stationId}`,
+          stationNumber: stationId
+        });
+      }
+    } catch (error) {
+      console.error('정류장 정보 로드 실패:', error);
+      // 에러 발생 시 기본 정보 설정
+      setStationInfo({
+        stationId: stationId,
+        stationName: `정류장 ${stationId}`,
+        stationNumber: stationId
+      });
+    }
+  };
+
   const loadBusArrivalInfo = async (isRefresh = false) => {
     try {
       if (isRefresh) {
@@ -91,14 +160,7 @@ function StationDetailContent() {
         setBusArrivals(response.data || []);
         setLastUpdated(new Date());
         
-        // 첫 로드 시 정류장 정보 설정 (임시)
-        if (!stationInfo) {
-          setStationInfo({
-            stationId: stationId,
-            stationName: `정류장 ${stationId}`,
-            stationNumber: stationId
-          });
-        }
+
         
         if (isRefresh && !autoUpdate) {
           toast.success('버스 도착 정보가 업데이트되었습니다.');
