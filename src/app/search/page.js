@@ -248,7 +248,7 @@ export default function SearchPage() {
               >
                 <div className="flex items-center gap-1">
                   <FiBell className="w-4 h-4" />
-                  <span className="text-sm">알림</span>
+                  <span className="text-sm">버스알림</span>
                 </div>
                 {unreadNotificationCount > 0 && (
                   <span className="absolute -top-1 -right-1 px-1.5 py-0.5 bg-red-500 text-white text-xs rounded-full min-w-[18px] text-center">

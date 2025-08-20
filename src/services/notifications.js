@@ -1,10 +1,10 @@
 // 알림 관련 API 서비스
 const API_BASE_URL = 'http://localhost:8080';
 
-// 알림 목록 조회
+// 버스 도착 알림 목록 조회
 export const getNotifications = async (userId, page = 0, size = 20) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/notifications?userId=${userId}&page=${page}&size=${size}`, {
+    const response = await fetch(`${API_BASE_URL}/bus-notifications?userId=${userId}&page=${page}&size=${size}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json; charset=utf-8',
@@ -29,10 +29,10 @@ export const getNotifications = async (userId, page = 0, size = 20) => {
   }
 };
 
-// 알림 읽음 처리
+// 버스 도착 알림 읽음 처리
 export const markNotificationAsRead = async (notificationId, userId) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/notifications/${notificationId}/read?userId=${userId}`, {
+    const response = await fetch(`${API_BASE_URL}/bus-notifications/${notificationId}/read?userId=${userId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json; charset=utf-8',
@@ -57,10 +57,10 @@ export const markNotificationAsRead = async (notificationId, userId) => {
   }
 };
 
-// 알림 설정 조회
+// 버스 도착 알림 설정 조회
 export const getNotificationSettings = async (userId) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/notifications/settings?userId=${userId}`, {
+    const response = await fetch(`${API_BASE_URL}/bus-notifications/settings?userId=${userId}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json; charset=utf-8',
@@ -85,10 +85,10 @@ export const getNotificationSettings = async (userId) => {
   }
 };
 
-// 알림 설정 업데이트
+// 버스 도착 알림 설정 업데이트
 export const updateNotificationSettings = async (userId, settings) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/notifications/settings`, {
+    const response = await fetch(`${API_BASE_URL}/bus-notifications/settings`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json; charset=utf-8',
@@ -117,10 +117,10 @@ export const updateNotificationSettings = async (userId, settings) => {
   }
 };
 
-// 읽지 않은 알림 조회
+// 읽지 않은 버스 도착 알림 조회
 export const getUnreadNotifications = async (userId) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/notifications/unread?userId=${userId}`, {
+    const response = await fetch(`${API_BASE_URL}/bus-notifications/unread?userId=${userId}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json; charset=utf-8',
@@ -145,10 +145,10 @@ export const getUnreadNotifications = async (userId) => {
   }
 };
 
-// 모든 알림 읽음 처리
+// 모든 버스 도착 알림 읽음 처리
 export const markAllNotificationsAsRead = async (userId) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/notifications/read-all?userId=${userId}`, {
+    const response = await fetch(`${API_BASE_URL}/bus-notifications/read-all?userId=${userId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json; charset=utf-8',
@@ -173,10 +173,10 @@ export const markAllNotificationsAsRead = async (userId) => {
   }
 };
 
-// 읽지 않은 알림 개수 조회
+// 읽지 않은 버스 도착 알림 개수 조회
 export const getUnreadNotificationCount = async (userId) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/notifications/unread/count?userId=${userId}`, {
+    const response = await fetch(`${API_BASE_URL}/bus-notifications/unread/count?userId=${userId}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json; charset=utf-8',

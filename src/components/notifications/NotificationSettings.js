@@ -25,9 +25,11 @@ const NotificationSettings = ({ userId }) => {
       const response = await getNotificationSettings(userId);
       
       if (response.success && response.data) {
+        // 새로운 API는 단일 객체를 반환 (배열이 아님)
+        const settingData = response.data;
         setSettings({
-          minutesBefore: response.data.minutesBefore || 5,
-          enabled: response.data.enabled !== false
+          minutesBefore: settingData.minutesBefore || 5,
+          enabled: settingData.enabled !== false
         });
       }
     } catch (error) {
@@ -89,8 +91,8 @@ const NotificationSettings = ({ userId }) => {
           <FiSettings className="w-5 h-5" />
         </div>
         <div>
-          <h3 className="text-lg font-semibold text-gray-900">알림 설정</h3>
-          <p className="text-sm text-gray-600">버스 도착 알림을 언제 받을지 설정하세요</p>
+          <h3 className="text-lg font-semibold text-gray-900">버스 도착 알림 설정</h3>
+          <p className="text-sm text-gray-600">즐겨찾기한 버스 노선의 도착 알림을 언제 받을지 설정하세요</p>
         </div>
       </div>
 

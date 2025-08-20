@@ -81,7 +81,7 @@ const NotificationPage = () => {
                 <FiArrowLeft className="w-5 h-5" />
               </button>
               <div>
-                <h1 className="text-lg font-bold text-gray-900">알림</h1>
+                <h1 className="text-lg font-bold text-gray-900">버스 도착 알림</h1>
                 <p className="text-sm text-gray-600">{userEmail}</p>
               </div>
             </div>
@@ -102,7 +102,7 @@ const NotificationPage = () => {
               }`}
             >
               <FiBell className="w-4 h-4" />
-              <span className="font-medium">알림 목록</span>
+              <span className="font-medium">버스 도착 알림</span>
               {unreadCount > 0 && (
                 <span className="ml-1 px-2 py-1 bg-red-500 text-white text-xs rounded-full">
                   {unreadCount}

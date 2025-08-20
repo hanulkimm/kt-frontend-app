@@ -192,7 +192,7 @@ const NotificationList = ({ userId, onUnreadCountChange }) => {
                   <FiBell className="w-4 h-4" />
                 </div>
                 <h4 className="font-semibold text-gray-900">
-                  {notification.routeName}번 버스 도착 알림
+                  {notification.routeNumber}번 ({notification.routeName}) 버스 도착 알림
                 </h4>
                 {!notification.isRead && (
                   <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
@@ -202,6 +202,7 @@ const NotificationList = ({ userId, onUnreadCountChange }) => {
               <div className="flex items-center gap-2 text-gray-700 mb-2">
                 <FiMapPin className="w-4 h-4 text-gray-500" />
                 <span className="text-sm">{notification.stationName}</span>
+                <span className="text-xs text-gray-400">정류장</span>
               </div>
               
               <p className="text-gray-800 mb-3">{notification.message}</p>
