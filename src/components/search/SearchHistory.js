@@ -18,24 +18,23 @@ const SearchHistory = ({ onHistoryClick }) => {
       setLoading(true);
       const userId = localStorage.getItem('userId');
       if (!userId) {
-        // userId가 없으면 더미 데이터 사용
-        setHistory([
-          { id: '1', query: '강남역', timestamp: '1,234회 이용' },
-          { id: '2', query: '홍대입구역', timestamp: '987회 이용' },
-          { id: '3', query: '명동역', timestamp: '856회 이용' },
-          { id: '4', query: '잠실역', timestamp: '743회 이용' }
-        ]);
+        console.log('userId가 없어 검색 기록을 불러올 수 없습니다.');
+        setHistory([]);
         return;
       }
 
       const response = await getSearchHistory(userId, 5);
       if (response.success) {
         setHistory(response.data || []);
+        console.log('검색 기록 데이터:', response.data);
       } else {
+        console.error('검색 기록 로드 실패:', response.message);
+        setHistory([]);
         toast.error(response.message);
       }
     } catch (error) {
-      console.error('검색 기록 로드 실패:', error);
+      console.error('검색 기록 로드 오류:', error);
+      setHistory([]);
       toast.error(error.message || '검색 기록을 불러오는데 실패했습니다.');
     } finally {
       setLoading(false);
@@ -48,9 +47,8 @@ const SearchHistory = ({ onHistoryClick }) => {
     try {
       const userId = localStorage.getItem('userId');
       if (!userId) {
-        // 더미 데이터에서 삭제
-        setHistory(prev => prev.filter(item => item.id !== historyId));
-        toast.success('검색 기록이 삭제되었습니다.');
+        console.log('userId가 없어 검색 기록을 삭제할 수 없습니다.');
+        toast.error('로그인이 필요합니다.');
         return;
       }
 
@@ -59,10 +57,11 @@ const SearchHistory = ({ onHistoryClick }) => {
         setHistory(prev => prev.filter(item => item.id !== historyId));
         toast.success('검색 기록이 삭제되었습니다.');
       } else {
+        console.error('검색 기록 삭제 실패:', response.message);
         toast.error(response.message);
       }
     } catch (error) {
-      console.error('검색 기록 삭제 실패:', error);
+      console.error('검색 기록 삭제 오류:', error);
       toast.error(error.message || '검색 기록 삭제에 실패했습니다.');
     }
   };
@@ -76,11 +75,11 @@ const SearchHistory = ({ onHistoryClick }) => {
   if (loading) {
     return (
       <div className="w-full">
-        <div className="flex items-center gap-2 mb-4">
-          <FiClock className="w-5 h-5 text-emerald-500" />
-          <h3 className="text-lg font-semibold text-gray-900">실시간 인기 정류장</h3>
-          <span className="text-sm text-gray-500">4개</span>
-        </div>
+                     <div className="flex items-center gap-2 mb-4">
+               <FiClock className="w-5 h-5 text-emerald-500" />
+               <h3 className="text-lg font-semibold text-gray-900">최근 검색어</h3>
+               <span className="text-sm text-gray-500">4개</span>
+             </div>
         <div className="space-y-2">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="animate-pulse">
@@ -100,11 +99,11 @@ const SearchHistory = ({ onHistoryClick }) => {
 
   return (
     <div className="w-full">
-      <div className="flex items-center gap-2 mb-4">
-        <FiClock className="w-5 h-5 text-emerald-500" />
-        <h3 className="text-lg font-semibold text-gray-900">실시간 인기 정류장</h3>
-        <span className="text-sm text-gray-500">{history.length}개</span>
-      </div>
+                   <div className="flex items-center gap-2 mb-4">
+               <FiClock className="w-5 h-5 text-emerald-500" />
+               <h3 className="text-lg font-semibold text-gray-900">최근 검색어</h3>
+               <span className="text-sm text-gray-500">{history.length}개</span>
+             </div>
       
       {history.length === 0 ? (
         <div className="text-center py-8 text-gray-500">

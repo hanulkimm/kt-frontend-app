@@ -6,7 +6,7 @@ import { getBusTypeInfo, getCrowdedInfo, getLowPlateInfo } from '../../services/
 import { addRouteBookmark, removeRouteBookmark, checkRouteBookmarkStatus } from '../../services/bookmarks';
 import toast from 'react-hot-toast';
 
-const BusArrivalItem = ({ busRoute, onRouteClick }) => {
+const BusArrivalItem = ({ busRoute, stationId, stationName, onRouteClick }) => {
   const busTypeInfo = getBusTypeInfo(busRoute.routeTypeCd);
   const [isBookmarked, setIsBookmarked] = useState(false);
 
@@ -30,7 +30,8 @@ const BusArrivalItem = ({ busRoute, onRouteClick }) => {
     
     try {
       if (isBookmarked) {
-        const response = await removeRouteBookmark(busRoute.routeId);
+        // 삭제 시에는 routeId와 stationId 모두 필요
+        const response = await removeRouteBookmark(busRoute.routeId, stationId);
         if (response.success) {
           setIsBookmarked(false);
           toast.success('노선 즐겨찾기에서 제거되었습니다.');
@@ -38,7 +39,8 @@ const BusArrivalItem = ({ busRoute, onRouteClick }) => {
           toast.error(response.message);
         }
       } else {
-        const response = await addRouteBookmark(busRoute.routeId, busRoute);
+        // 추가 시에는 routeData, stationId, stationName 모두 필요
+        const response = await addRouteBookmark(busRoute.routeId, busRoute, stationId, stationName);
         if (response.success) {
           setIsBookmarked(true);
           toast.success('노선이 즐겨찾기에 추가되었습니다.');

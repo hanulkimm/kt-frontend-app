@@ -46,6 +46,7 @@ const SearchResultItem = ({ station, showBookmarkButton = true, onClick }) => {
         }
       } else {
         const response = await addStationBookmark(station.id, {
+          stationName: station.stationName || station.name,
           name: station.name,
           number: station.number,
           latitude: station.latitude,

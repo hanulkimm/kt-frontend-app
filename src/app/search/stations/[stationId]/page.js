@@ -299,6 +299,8 @@ function StationDetailContent() {
               <BusArrivalItem
                 key={busRoute.routeId}
                 busRoute={busRoute}
+                stationId={stationId}
+                stationName={stationInfo?.stationName || stationInfo?.name || `정류장 ${stationId}`}
                 onRouteClick={handleRouteClick}
               />
             ))}

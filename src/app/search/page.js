@@ -1,70 +1,186 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Toaster } from 'react-hot-toast';
 import SearchBar from '../../components/search/SearchBar';
 import SearchHistory from '../../components/search/SearchHistory';
-import { getBookmarkedStations } from '../../services/bookmarks';
+import { getBookmarkedStations, getBookmarkedRoutes } from '../../services/bookmarks';
+import { addSearchHistory } from '../../services/search';
 import toast from 'react-hot-toast';
 
 export default function SearchPage() {
+  const router = useRouter();
   const [bookmarkedStations, setBookmarkedStations] = useState([]);
+  const [bookmarkedRoutes, setBookmarkedRoutes] = useState([]);
+  const [userEmail, setUserEmail] = useState('');
+  const [bookmarksLoading, setBookmarksLoading] = useState(true);
+  const [routesLoading, setRoutesLoading] = useState(true);
+
+  // 한글 디코딩 유틸리티 함수
+  const decodeKoreanText = (text) => {
+    if (!text || typeof text !== 'string') return text;
+    try {
+      // URL 인코딩된 텍스트인지 확인하고 디코딩
+      if (text.includes('%')) {
+        return decodeURIComponent(text);
+      }
+      // HTML 엔티티 디코딩
+      const textarea = document.createElement('textarea');
+      textarea.innerHTML = text;
+      return textarea.value;
+    } catch (error) {
+      console.warn('텍스트 디코딩 실패:', text, error);
+      return text;
+    }
+  };
 
   useEffect(() => {
-    // 컴포넌트 마운트 시 userId 설정 (실제 앱에서는 로그인 시 설정)
-    if (!localStorage.getItem('userId')) {
-      localStorage.setItem('userId', 'demo-user-123');
-    }
-    
-    loadBookmarkedStations();
-  }, []);
+    // 로그인 상태 확인
+    const checkAuthStatus = () => {
+      const existingUserId = localStorage.getItem('userId');
+      const existingUserEmail = localStorage.getItem('userEmail');
+      
+      if (!existingUserId) {
+        console.log('로그인되지 않은 사용자 - 로그인 페이지로 리다이렉트');
+        toast.error('로그인이 필요합니다.');
+        router.push('/login');
+        return false;
+      }
+      
+      setUserEmail(existingUserEmail || '');
+      return true;
+    };
+
+             if (checkAuthStatus()) {
+           loadBookmarkedStations();
+           loadBookmarkedRoutes();
+         }
+  }, [router]);
 
   const loadBookmarkedStations = async () => {
     try {
+      setBookmarksLoading(true);
       const userId = localStorage.getItem('userId');
+      
       if (!userId) {
-        // 더미 즐겨찾기 데이터
-        setBookmarkedStations([
-          {
-            id: '9700',
-            name: '대학역(중)',
-            number: '9700',
-            distance: '일반',
-            latitude: 37.502345,
-            longitude: 127.040123
-          },
-          {
-            id: '146',
-            name: '잠실역',
-            number: '146',
-            distance: '일반',
-            latitude: 37.513294,
-            longitude: 127.100052
-          },
-          {
-            id: '2415',
-            name: '수원역',
-            number: '2415',
-            distance: '직통최석',
-            latitude: 37.266940,
-            longitude: 127.001058
-          }
-        ]);
+        console.log('userId가 없어 즐겨찾기를 불러올 수 없습니다.');
+        setBookmarkedStations([]);
+        setBookmarksLoading(false);
         return;
       }
 
+      console.log('즐겨찾기 정류장 로드 시작 - userId:', userId);
+      
       const response = await getBookmarkedStations(userId);
       if (response.success) {
-        setBookmarkedStations(response.data || []);
+        const bookmarks = response.data || [];
+        
+        // 한글 인코딩 문제 해결을 위한 데이터 처리
+        const processedBookmarks = bookmarks.map(bookmark => ({
+          ...bookmark,
+          stationName: decodeKoreanText(bookmark.stationName),
+          name: decodeKoreanText(bookmark.name)
+        }));
+        
+        setBookmarkedStations(processedBookmarks);
+        console.log('✅ 즐겨찾기 정류장 로드 성공:', processedBookmarks);
+        
+        if (processedBookmarks.length > 0) {
+          toast.success(`${processedBookmarks.length}개의 정류장 즐겨찾기를 불러왔습니다.`);
+        }
+      } else {
+        console.error('❌ 즐겨찾기 정류장 로드 실패:', response.message);
+        setBookmarkedStations([]);
+        toast.error('정류장 즐겨찾기를 불러오는데 실패했습니다: ' + response.message);
       }
     } catch (error) {
-      console.error('즐겨찾기 로드 실패:', error);
-      // 에러가 발생해도 페이지는 정상적으로 표시
+      console.error('🔥 즐겨찾기 정류장 로드 오류:', error);
+      setBookmarkedStations([]);
+      
+      // 사용자 친화적인 오류 메시지
+      if (error.message.includes('유효하지 않은 사용자 ID')) {
+        toast.error('로그인 정보가 유효하지 않습니다. 다시 로그인해주세요.');
+        setTimeout(() => {
+          handleLogout();
+        }, 2000);
+      } else {
+        toast.error('정류장 즐겨찾기를 불러오는데 실패했습니다.');
+      }
+    } finally {
+      setBookmarksLoading(false);
+    }
+  };
+
+  const loadBookmarkedRoutes = async () => {
+    try {
+      setRoutesLoading(true);
+      const userId = localStorage.getItem('userId');
+      
+      if (!userId) {
+        console.log('userId가 없어 노선 즐겨찾기를 불러올 수 없습니다.');
+        setBookmarkedRoutes([]);
+        setRoutesLoading(false);
+        return;
+      }
+
+      console.log('즐겨찾기 노선 로드 시작 - userId:', userId);
+      
+      const response = await getBookmarkedRoutes(userId);
+      if (response.success) {
+        const routes = response.data || [];
+        
+        // 한글 인코딩 문제 해결을 위한 데이터 처리
+        const processedRoutes = routes.map(route => ({
+          ...route,
+          routeName: decodeKoreanText(route.routeName),
+          routeNumber: decodeKoreanText(route.routeNumber),
+          stationName: decodeKoreanText(route.stationName)
+        }));
+        
+        setBookmarkedRoutes(processedRoutes);
+        console.log('✅ 즐겨찾기 노선 로드 성공:', processedRoutes);
+        
+        if (processedRoutes.length > 0) {
+          toast.success(`${processedRoutes.length}개의 노선 즐겨찾기를 불러왔습니다.`);
+        }
+      } else {
+        console.error('❌ 즐겨찾기 노선 로드 실패:', response.message);
+        setBookmarkedRoutes([]);
+        toast.error('노선 즐겨찾기를 불러오는데 실패했습니다: ' + response.message);
+      }
+    } catch (error) {
+      console.error('🔥 즐겨찾기 노선 로드 오류:', error);
+      setBookmarkedRoutes([]);
+      
+      // 사용자 친화적인 오류 메시지
+      if (error.message.includes('유효하지 않은 사용자 ID')) {
+        toast.error('로그인 정보가 유효하지 않습니다. 다시 로그인해주세요.');
+        setTimeout(() => {
+          handleLogout();
+        }, 2000);
+      } else {
+        toast.error('노선 즐겨찾기를 불러오는데 실패했습니다.');
+      }
+    } finally {
+      setRoutesLoading(false);
     }
   };
 
   const handleSearch = async (query) => {
     if (!query.trim()) return;
+
+    // 검색 기록 저장
+    const userId = localStorage.getItem('userId');
+    if (userId) {
+      try {
+        await addSearchHistory(query.trim(), userId);
+        console.log('검색 기록 저장 완료:', query.trim());
+      } catch (error) {
+        console.error('검색 기록 저장 실패:', error);
+        // 검색 기록 저장 실패해도 검색은 계속 진행
+      }
+    }
 
     // 검색 결과 페이지로 이동
     const searchParams = new URLSearchParams({ q: query.trim() });
@@ -73,6 +189,19 @@ export default function SearchPage() {
 
   const handleHistoryClick = (query) => {
     handleSearch(query);
+  };
+
+  const handleLogout = () => {
+    // 로컬 스토리지에서 사용자 정보 제거
+    localStorage.removeItem('userId');
+    localStorage.removeItem('userEmail');
+    
+    toast.success('로그아웃되었습니다.');
+    
+    // 로그인 페이지로 리다이렉트
+    setTimeout(() => {
+      router.push('/login');
+    }, 1000);
   };
 
   return (
@@ -96,12 +225,15 @@ export default function SearchPage() {
               <button className="p-2 text-gray-600 hover:text-gray-900">
                 <span className="text-sm">알림</span>
               </button>
-              <button className="p-2 text-gray-600 hover:text-gray-900">
-                <span className="text-sm">마이페이지</span>
-              </button>
-              <button className="px-3 py-1 bg-gray-100 text-gray-700 rounded text-sm">
-                로그아웃
-              </button>
+                              <button className="p-2 text-gray-600 hover:text-gray-900">
+                  <span className="text-sm">마이페이지</span>
+                </button>
+                <button 
+                  onClick={handleLogout}
+                  className="px-3 py-1 bg-gray-100 text-gray-700 rounded text-sm hover:bg-gray-200 transition-colors duration-200"
+                >
+                  로그아웃
+                </button>
             </div>
           </div>
         </div>
@@ -112,7 +244,7 @@ export default function SearchPage() {
         {/* 환영 메시지 */}
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            안녕하세요, d님! 👋
+            안녕하세요, {userEmail ? userEmail.split('@')[0] : '사용자'}님! 👋
           </h2>
           <p className="text-gray-600">
             오늘도 BusMate와 함께 편리한 대중교통 이용하세요.
@@ -130,82 +262,146 @@ export default function SearchPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* 즐겨찾기 정류장 */}
           <div>
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-2xl">❤️</span>
-              <h3 className="text-lg font-semibold text-gray-900">즐겨찾기 정류장</h3>
-              <span className="text-sm text-gray-500">{bookmarkedStations.length}개</span>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">❤️</span>
+                <h3 className="text-lg font-semibold text-gray-900">즐겨찾기 정류장</h3>
+                <span className="text-sm text-gray-500">{bookmarkedStations.length}개</span>
+                {bookmarksLoading && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-500"></div>
+                )}
+              </div>
+              <button
+                onClick={loadBookmarkedStations}
+                disabled={bookmarksLoading}
+                className="text-sm text-emerald-600 hover:text-emerald-700 disabled:opacity-50"
+              >
+                새로고침
+              </button>
             </div>
             
-            {bookmarkedStations.length === 0 ? (
+            {bookmarksLoading ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="animate-pulse">
+                    <div className="flex items-center justify-between p-4 bg-gray-100 rounded-lg">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="h-4 bg-gray-300 rounded w-24"></div>
+                          <div className="h-4 bg-gray-300 rounded w-12"></div>
+                        </div>
+                        <div className="h-3 bg-gray-300 rounded w-16"></div>
+                      </div>
+                      <div className="h-4 bg-gray-300 rounded w-8"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : bookmarkedStations.length === 0 ? (
               <div className="text-center py-8 text-gray-500 bg-white rounded-lg border border-gray-200">
                 <span className="text-4xl mb-3 block">❤️</span>
                 <p>즐겨찾기한 정류장이 없습니다.</p>
+                <p className="text-sm mt-1">정류장 상세 페이지에서 즐겨찾기를 추가해보세요.</p>
               </div>
             ) : (
               <div className="space-y-3">
-                {bookmarkedStations.map((station) => (
-                  <div key={station.id} className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-semibold text-gray-900">{station.name}</h4>
-                        <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-md font-medium">
-                          {station.number}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-600">{station.distance}</p>
-                    </div>
-                    <button className="text-sm text-gray-500 hover:text-gray-700">
-                      일반
-                    </button>
-                  </div>
-                ))}
+                                 {bookmarkedStations.map((station) => (
+                   <div key={station.stationId || station.targetId || station.id} className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow duration-200">
+                     <div className="flex items-center gap-3">
+                       <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                       <div className="flex-1">
+                                                <h4 className="font-semibold text-gray-900 text-base">
+                         {decodeKoreanText(station.stationName || station.name || '정류장명 없음')}
+                       </h4>
+                       <p className="text-sm text-gray-600">
+                         정류장 {station.stationId || station.targetId || station.number || 'ID 없음'}
+                       </p>
+                       </div>
+                     </div>
+                     <button 
+                       onClick={() => window.location.href = `/search/stations/${station.stationId || station.targetId || station.id}`}
+                       className="text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                     >
+                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                       </svg>
+                     </button>
+                   </div>
+                 ))}
               </div>
             )}
           </div>
 
-          {/* 즐겨찾기 노선 */}
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-2xl">🚌</span>
-              <h3 className="text-lg font-semibold text-gray-900">즐겨찾기 노선</h3>
-              <span className="text-sm text-gray-500">3개</span>
-            </div>
-            
-            <div className="space-y-3">
-              <div className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <span className="px-2 py-1 bg-blue-500 text-white text-sm rounded-md font-medium">9700</span>
-                  <div>
-                    <h4 className="font-semibold text-gray-900">대학역(중)</h4>
-                    <p className="text-sm text-gray-600">강남역</p>
-                  </div>
-                </div>
-                <span className="text-sm text-gray-500">일반</span>
-              </div>
-              
-              <div className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <span className="px-2 py-1 bg-blue-500 text-white text-sm rounded-md font-medium">146</span>
-                  <div>
-                    <h4 className="font-semibold text-gray-900">잠실역</h4>
-                    <p className="text-sm text-gray-600">잠실역</p>
-                  </div>
-                </div>
-                <span className="text-sm text-gray-500">일반</span>
-              </div>
-              
-              <div className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <span className="px-2 py-1 bg-red-500 text-white text-sm rounded-md font-medium">2415</span>
-                  <div>
-                    <h4 className="font-semibold text-gray-900">수원역</h4>
-                    <p className="text-sm text-gray-600">역삼역.한국지식재산센터</p>
-                  </div>
-                </div>
-                <span className="text-sm text-gray-500">직통최석</span>
-              </div>
-            </div>
-          </div>
+                           {/* 즐겨찾기 노선 */}
+                 <div>
+                   <div className="flex items-center justify-between mb-4">
+                     <div className="flex items-center gap-2">
+                       <span className="text-2xl">🚌</span>
+                       <h3 className="text-lg font-semibold text-gray-900">즐겨찾기 노선</h3>
+                       <span className="text-sm text-gray-500">{bookmarkedRoutes.length}개</span>
+                       {routesLoading && (
+                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-500"></div>
+                       )}
+                     </div>
+                     <button
+                       onClick={loadBookmarkedRoutes}
+                       disabled={routesLoading}
+                       className="text-sm text-emerald-600 hover:text-emerald-700 disabled:opacity-50"
+                     >
+                       새로고침
+                     </button>
+                   </div>
+                   
+                   {routesLoading ? (
+                     <div className="space-y-3">
+                       {[1, 2, 3].map((i) => (
+                         <div key={i} className="animate-pulse">
+                           <div className="flex items-center justify-between p-4 bg-gray-100 rounded-lg">
+                             <div className="flex-1">
+                               <div className="flex items-center gap-2 mb-2">
+                                 <div className="h-4 bg-gray-300 rounded w-16"></div>
+                                 <div className="h-4 bg-gray-300 rounded w-20"></div>
+                               </div>
+                               <div className="h-3 bg-gray-300 rounded w-24"></div>
+                             </div>
+                             <div className="h-4 bg-gray-300 rounded w-8"></div>
+                           </div>
+                         </div>
+                       ))}
+                     </div>
+                   ) : bookmarkedRoutes.length === 0 ? (
+                     <div className="text-center py-8 text-gray-500 bg-white rounded-lg border border-gray-200">
+                       <span className="text-4xl mb-3 block">🚌</span>
+                       <p>즐겨찾기한 노선이 없습니다.</p>
+                       <p className="text-sm mt-1">노선 상세 페이지에서 즐겨찾기를 추가해보세요.</p>
+                     </div>
+                   ) : (
+                     <div className="space-y-3">
+                                              {bookmarkedRoutes.map((route) => (
+                         <div key={`${route.routeId}-${route.stationId}`} className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow duration-200">
+                           <div className="flex items-center gap-3">
+                             <div className={`px-2 py-1 rounded text-xs font-medium text-white ${
+                               route.routeTypeCd === '1' ? 'bg-red-500' : 'bg-blue-500'
+                             }`}>
+                               {route.routeNumber || route.routeId || '번호 없음'}
+                             </div>
+                             <div className="flex-1">
+                               <h4 className="font-semibold text-gray-900 text-base">
+                                 {decodeKoreanText(route.routeName || route.routeNumber || '노선명 없음')}
+                               </h4>
+                               <p className="text-sm text-gray-600">
+                                 {decodeKoreanText(route.stationName || '정류장')}
+                               </p>
+                             </div>
+                           </div>
+                           <div className="text-sm text-gray-500">
+                             {route.routeTypeCd === '1' ? '직행좌석' : '일반'}
+                           </div>
+                         </div>
+                       ))}
+                     </div>
+                   )}
+                 </div>
         </div>
 
         {/* 실시간 인기 정류장 */}
@@ -250,3 +446,4 @@ export default function SearchPage() {
     </div>
   );
 }
+

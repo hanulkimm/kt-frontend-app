@@ -44,14 +44,33 @@ searchAPI.interceptors.response.use(
  */
 export const getSearchHistory = async (userId, limit = 5) => {
   try {
-    const response = await searchAPI.get(`/search/history`, {
-      params: { userId, limit }
+    // userId 유효성 검사
+    const userIdNum = parseInt(userId);
+    if (isNaN(userIdNum) || !userId) {
+      console.error('유효하지 않은 userId:', userId);
+      throw new Error('유효하지 않은 사용자 ID입니다.');
+    }
+    
+    // 백엔드 API 직접 호출 - API 명세에 맞춰 수정
+    const response = await fetch(`http://localhost:8080/search/history?userId=${userIdNum}&limit=${limit}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
     });
-    return response.data;
+    
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'API 호출 실패');
+    }
+    
+    return result;
   } catch (error) {
+    console.error('검색 기록 조회 실패:', error);
     throw {
       success: false,
-      message: error.response?.data?.message || '검색 기록을 불러오는데 실패했습니다.',
+      message: error.message || '검색 기록을 불러오는데 실패했습니다.',
       data: null
     };
   }
@@ -65,14 +84,33 @@ export const getSearchHistory = async (userId, limit = 5) => {
  */
 export const deleteSearchHistory = async (historyId, userId) => {
   try {
-    const response = await searchAPI.delete(`/search/history/${historyId}`, {
-      params: { userId }
+    // userId 유효성 검사
+    const userIdNum = parseInt(userId);
+    if (isNaN(userIdNum) || !userId) {
+      console.error('유효하지 않은 userId:', userId);
+      throw new Error('유효하지 않은 사용자 ID입니다.');
+    }
+    
+    // 백엔드 API 직접 호출 - API 명세에 맞춰 수정
+    const response = await fetch(`http://localhost:8080/search/history/${historyId}?userId=${userIdNum}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
     });
-    return response.data;
+    
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'API 호출 실패');
+    }
+    
+    return result;
   } catch (error) {
+    console.error('검색 기록 삭제 실패:', error);
     throw {
       success: false,
-      message: error.response?.data?.message || '검색 기록 삭제에 실패했습니다.',
+      message: error.message || '검색 기록 삭제에 실패했습니다.',
       data: null
     };
   }
@@ -127,17 +165,39 @@ export const searchStations = async (query, userId) => {
  * @param {string} userId - 사용자 ID
  * @returns {Promise} API 응답
  */
-export const addSearchHistory = async (query, userId) => {
+export const addSearchHistory = async (keyword, userId) => {
   try {
-    const response = await searchAPI.post('/search/history', {
-      query,
-      userId
+    // userId 유효성 검사
+    const userIdNum = parseInt(userId);
+    if (isNaN(userIdNum) || !userId) {
+      console.error('유효하지 않은 userId:', userId);
+      throw new Error('유효하지 않은 사용자 ID입니다.');
+    }
+    
+    // 백엔드 API 직접 호출 - API 명세에 맞춰 수정
+    const response = await fetch('http://localhost:8080/search/history', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userId: userIdNum, // 검증된 숫자
+        keyword: keyword
+      })
     });
-    return response.data;
+    
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'API 호출 실패');
+    }
+    
+    return result;
   } catch (error) {
+    console.error('검색 기록 저장 실패:', error);
     throw {
       success: false,
-      message: error.response?.data?.message || '검색 기록 저장에 실패했습니다.',
+      message: error.message || '검색 기록 저장에 실패했습니다.',
       data: null
     };
   }
