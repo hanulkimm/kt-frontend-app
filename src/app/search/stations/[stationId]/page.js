@@ -502,26 +502,26 @@ function StationDetailContent() {
                   {/* 리뷰 내용 */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">리뷰 내용</label>
-                    <textarea
-                      value={reviewForm.content}
-                      onChange={(e) => setReviewForm(prev => ({ ...prev, content: e.target.value }))}
-                      rows={4}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors duration-200"
-                      placeholder="이 정류장이나 노선에 대한 경험을 공유해주세요..."
-                      required
-                    />
+                                         <textarea
+                       value={reviewForm.content}
+                       onChange={(e) => setReviewForm(prev => ({ ...prev, content: e.target.value }))}
+                       rows={4}
+                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors duration-200 text-gray-900 placeholder-gray-500"
+                       placeholder="이 정류장이나 노선에 대한 경험을 공유해주세요..."
+                       required
+                     />
                   </div>
                   
                   {/* 노선 번호 (선택) */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">노선 번호 (선택)</label>
-                    <input
-                      type="text"
-                      value={reviewForm.routeNumber}
-                      onChange={(e) => setReviewForm(prev => ({ ...prev, routeNumber: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors duration-200"
-                      placeholder="예: 9700, 146, 421"
-                    />
+                                         <input
+                       type="text"
+                       value={reviewForm.routeNumber}
+                       onChange={(e) => setReviewForm(prev => ({ ...prev, routeNumber: e.target.value }))}
+                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors duration-200 text-gray-900 placeholder-gray-500"
+                       placeholder="예: 9700, 146, 421"
+                     />
                   </div>
                   
                   {/* 버튼 */}

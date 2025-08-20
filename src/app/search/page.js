@@ -86,9 +86,7 @@ export default function SearchPage() {
         setBookmarkedStations(processedBookmarks);
         console.log('✅ 즐겨찾기 정류장 로드 성공:', processedBookmarks);
         
-        if (processedBookmarks.length > 0) {
-          toast.success(`${processedBookmarks.length}개의 정류장 즐겨찾기를 불러왔습니다.`);
-        }
+
       } else {
         console.error('❌ 즐겨찾기 정류장 로드 실패:', response.message);
         setBookmarkedStations([]);
@@ -141,9 +139,7 @@ export default function SearchPage() {
         setBookmarkedRoutes(processedRoutes);
         console.log('✅ 즐겨찾기 노선 로드 성공:', processedRoutes);
         
-        if (processedRoutes.length > 0) {
-          toast.success(`${processedRoutes.length}개의 노선 즐겨찾기를 불러왔습니다.`);
-        }
+
       } else {
         console.error('❌ 즐겨찾기 노선 로드 실패:', response.message);
         setBookmarkedRoutes([]);
