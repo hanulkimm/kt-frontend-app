@@ -6,7 +6,7 @@ import { Toaster } from 'react-hot-toast';
 import { FiArrowLeft, FiMapPin, FiHeart, FiMap, FiSearch } from 'react-icons/fi';
 import SearchResultItem from '../../../components/search/SearchResultItem';
 import KakaoMap from '../../../components/map/KakaoMap';
-import { searchStations } from '../../../services/search';
+import { searchStations, addSearchHistory } from '../../../services/search';
 import toast from 'react-hot-toast';
 
 function StationsPageContent() {
@@ -18,6 +18,7 @@ function StationsPageContent() {
   const [loading, setLoading] = useState(true);
   const [showMap, setShowMap] = useState(false);
   const [selectedStation, setSelectedStation] = useState(null);
+  const [searchInput, setSearchInput] = useState(query || '');
 
   useEffect(() => {
     if (query) {
@@ -28,19 +29,35 @@ function StationsPageContent() {
   }, [query]);
 
   const performSearch = async (searchQuery) => {
+    if (!searchQuery.trim()) {
+      toast.error('검색어를 입력해주세요.');
+      return;
+    }
+
     try {
       setLoading(true);
-      const response = await searchStations(searchQuery, localStorage.getItem('userId'));
+      
+      // URL 업데이트
+      const newUrl = `/search/stations?q=${encodeURIComponent(searchQuery.trim())}`;
+      router.push(newUrl);
+      
+      // 검색 기록 저장
+      const userId = localStorage.getItem('userId');
+      if (userId) {
+        try {
+          await addSearchHistory(searchQuery.trim(), userId);
+          console.log('검색 기록 저장 완료:', searchQuery.trim());
+        } catch (error) {
+          console.error('검색 기록 저장 실패:', error);
+          // 검색 기록 저장 실패해도 검색은 계속 진행
+        }
+      }
+
+      const response = await searchStations(searchQuery.trim(), userId);
       
       if (response.success) {
         setStations(response.data || []);
-        if (response.data?.length === 0) {
-          toast.error('검색 결과가 없습니다.');
-        } else {
-          toast.success(response.message);
-        }
       } else {
-        toast.error(response.message);
         setStations([]);
       }
     } catch (error) {
@@ -54,7 +71,6 @@ function StationsPageContent() {
 
   const handleStationClick = (station) => {
     setSelectedStation(station);
-    toast.success(`${station.name} 정류장이 선택되었습니다.`);
   };
 
   const handleMapStationClick = (station) => {
@@ -84,13 +100,14 @@ function StationsPageContent() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <button
-                onClick={() => router.back()}
+                onClick={() => router.push('/search')}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200"
               >
                 <FiArrowLeft className="w-5 h-5" />
               </button>
               <div>
-                <h1 className="text-lg font-bold text-gray-900">정류장 검색 결과</h1>
+                <h1 className="text-lg font-bold text-gray-900">정류장 검색</h1>
+                <p className="text-sm text-gray-600">정류장을 검색하고 지도에서 확인하세요</p>
               </div>
             </div>
           </div>
@@ -103,16 +120,21 @@ function StationsPageContent() {
           <div className="relative">
             <input
               type="text"
-              value={query || ''}
-              readOnly
-              className="w-full pl-12 pr-20 py-3 border border-gray-200 rounded-lg text-gray-900 bg-gray-50 cursor-pointer"
-              placeholder="검색어를 입력하세요"
-              onClick={() => router.push('/search')}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  performSearch(searchInput);
+                }
+              }}
+              className="w-full pl-12 pr-20 py-3 border border-gray-200 rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors duration-200"
+              placeholder="정류장명을 입력하세요 (예: 강남역, 홍대입구역)"
             />
             <FiSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
             <button
-              onClick={() => router.push('/search')}
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 px-4 py-2 bg-emerald-500 text-white rounded-md hover:bg-emerald-600 transition-colors duration-200 font-medium"
+              onClick={() => performSearch(searchInput)}
+              disabled={!searchInput.trim()}
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 px-4 py-2 bg-emerald-500 text-white rounded-md hover:bg-emerald-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors duration-200 font-medium"
             >
               검색
             </button>
@@ -121,7 +143,7 @@ function StationsPageContent() {
           {/* 검색 결과 요약 */}
           <div className="mt-4 flex items-center justify-between">
             <div className="flex items-center gap-2 text-sm text-gray-600">
-              <span>"{query}" 검색 결과</span>
+              <span>"{query || searchInput}" 검색 결과</span>
               <span className="px-2 py-1 bg-emerald-100 text-emerald-800 rounded-md font-medium">
                 {stations.length}개 정류장
               </span>
@@ -164,15 +186,23 @@ function StationsPageContent() {
             <FiMapPin className="w-16 h-16 mx-auto mb-4 text-gray-300" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">검색 결과가 없습니다</h3>
             <p className="text-gray-600 mb-6">
-              "{query}"에 대한 정류장을 찾을 수 없습니다.<br/>
+              "{query || searchInput}"에 대한 정류장을 찾을 수 없습니다.<br/>
               다른 검색어로 다시 시도해보세요.
             </p>
-            <button
-              onClick={() => router.push('/search')}
-              className="px-6 py-3 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors duration-200"
-            >
-              다시 검색하기
-            </button>
+            <div className="flex items-center justify-center gap-3">
+              <button
+                onClick={() => setSearchInput('')}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors duration-200"
+              >
+                검색어 지우기
+              </button>
+              <button
+                onClick={() => router.push('/search')}
+                className="px-6 py-3 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors duration-200"
+              >
+                메인으로 돌아가기
+              </button>
+            </div>
           </div>
         ) : (
           <div className={`grid ${showMap ? 'lg:grid-cols-2' : 'grid-cols-1'} gap-6`}>
