@@ -67,13 +67,8 @@ const SearchResultItem = ({ station, showBookmarkButton = true, onClick }) => {
   };
 
   const handleStationClick = () => {
-    if (onClick) {
-      onClick(station);
-    } else {
-      // 기본 동작: 정류장 상세 페이지로 이동하는 로직 추가
-      console.log('정류장 선택:', station);
-      toast.success(`${station.name} 정류장이 선택되었습니다.`);
-    }
+    // 항상 정류장 상세 페이지로 이동
+    window.location.href = `/search/stations/${station.id}`;
   };
 
   return (

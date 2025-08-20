@@ -121,3 +121,71 @@ export const checkBookmarkStatus = async (stationId) => {
     };
   }
 };
+
+/**
+ * 노선 즐겨찾기 추가
+ * @param {string} routeId - 노선 ID
+ * @param {object} routeData - 노선 정보
+ * @returns {Promise} API 응답
+ */
+export const addRouteBookmark = async (routeId, routeData) => {
+  try {
+    const userId = localStorage.getItem('userId');
+    const response = await bookmarkAPI.post('/bookmarks/routes', {
+      routeId,
+      userId,
+      routeName: routeData.routeName,
+      routeDestName: routeData.routeDestName,
+      routeTypeCd: routeData.routeTypeCd
+    });
+    return response.data;
+  } catch (error) {
+    throw {
+      success: false,
+      message: error.response?.data?.message || '노선 즐겨찾기 추가에 실패했습니다.',
+      data: null
+    };
+  }
+};
+
+/**
+ * 노선 즐겨찾기 삭제
+ * @param {string} routeId - 노선 ID
+ * @returns {Promise} API 응답
+ */
+export const removeRouteBookmark = async (routeId) => {
+  try {
+    const userId = localStorage.getItem('userId');
+    const response = await bookmarkAPI.delete(`/bookmarks/routes/${routeId}`, {
+      params: { userId }
+    });
+    return response.data;
+  } catch (error) {
+    throw {
+      success: false,
+      message: error.response?.data?.message || '노선 즐겨찾기 삭제에 실패했습니다.',
+      data: null
+    };
+  }
+};
+
+/**
+ * 노선 즐겨찾기 상태 확인
+ * @param {string} routeId - 노선 ID
+ * @returns {Promise} API 응답
+ */
+export const checkRouteBookmarkStatus = async (routeId) => {
+  try {
+    const userId = localStorage.getItem('userId');
+    const response = await bookmarkAPI.get(`/bookmarks/routes/${routeId}/status`, {
+      params: { userId }
+    });
+    return response.data;
+  } catch (error) {
+    throw {
+      success: false,
+      message: error.response?.data?.message || '노선 즐겨찾기 상태 확인에 실패했습니다.',
+      data: { isBookmarked: false }
+    };
+  }
+};
