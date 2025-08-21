@@ -7,6 +7,7 @@ import { FiArrowLeft, FiMapPin, FiRefreshCw, FiClock, FiHeart, FiNavigation, FiM
 import { addRouteBookmark, removeRouteBookmark, checkRouteBookmarkStatus } from '../../../services/bookmarks';
 import { getBusArrivalItem } from '../../../services/busArrival';
 import { searchStations } from '../../../services/search';
+import { getBusRouteStations, addDistanceToStations } from '../../../services/busRoute';
 import KakaoMap from '../../../components/map/KakaoMap';
 import toast from 'react-hot-toast';
 
@@ -30,20 +31,8 @@ function RouteDetailContent() {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [stationMapData, setStationMapData] = useState([]);
-  
-  // 더미 노선 경로 데이터
-  const [routeStations] = useState([
-    { stationId: '121000962', stationName: 'AT센터.양재꽃시장', staOrder: 1, distance: '0km' },
-    { stationId: '121000963', stationName: '뱅뱅사거리.역삼동', staOrder: 2, distance: '1.2km' },
-    { stationId: '121000964', stationName: '강남역.강남역사거리', staOrder: 3, distance: '2.5km' },
-    { stationId: '121000965', stationName: '신논현역.논현동', staOrder: 4, distance: '3.8km' },
-    { stationId: '121000966', stationName: '학동역.논현동', staOrder: 5, distance: '4.9km' },
-    { stationId: '121000967', stationName: '압구정역.신사동', staOrder: 6, distance: '6.2km' },
-    { stationId: '121000968', stationName: '청담역.청담동', staOrder: 7, distance: '7.5km' },
-    { stationId: '121000969', stationName: '선릉역.대치동', staOrder: 8, distance: '8.8km' },
-    { stationId: '121000970', stationName: '삼성역.대치동', staOrder: 9, distance: '10.1km' },
-    { stationId: '121000971', stationName: '종합운동장.잠실동', staOrder: 10, distance: '11.4km' }
-  ]);
+  const [routeStations, setRouteStations] = useState([]);
+  const [routeStationsLoading, setRouteStationsLoading] = useState(true);
 
   useEffect(() => {
     if (routeId && stationId && staOrder) {
@@ -51,6 +40,7 @@ function RouteDetailContent() {
       loadBusArrivalInfo();
       checkBookmark();
       loadStationMapData();
+      loadRouteStations();
     }
   }, [routeId, stationId, staOrder]);
 
@@ -224,6 +214,44 @@ function RouteDetailContent() {
         regionName: '서울',
         centerYn: 'N'
       }]);
+    }
+  };
+
+  // 노선 경유 정류소 목록 로드
+  const loadRouteStations = async () => {
+    try {
+      setRouteStationsLoading(true);
+      console.log('🚏 노선 경유 정류소 목록 로드 시작:', routeId);
+      
+      const response = await getBusRouteStations(routeId);
+      
+      if (response.success && response.data) {
+        console.log('🚏 노선 경유 정류소 목록 로드 성공:', response.data.length, '개');
+        
+        // GPS 좌표를 이용해서 누적 거리 계산
+        const stationsWithDistance = addDistanceToStations(response.data);
+        
+        // stationSeq 순으로 정렬
+        const sortedStations = stationsWithDistance.sort((a, b) => a.stationSeq - b.stationSeq);
+        
+        setRouteStations(sortedStations);
+        
+        console.log('🚏 정류소 목록 처리 완료:', {
+          총개수: sortedStations.length,
+          첫번째정류소: sortedStations[0]?.stationName,
+          마지막정류소: sortedStations[sortedStations.length - 1]?.stationName
+        });
+      } else {
+        console.warn('⚠️ 노선 경유 정류소 데이터 없음:', response.message);
+        setRouteStations([]);
+        toast.warn('노선의 경유 정류소 정보를 불러올 수 없습니다.');
+      }
+    } catch (error) {
+      console.error('🔥 노선 경유 정류소 로드 실패:', error);
+      setRouteStations([]);
+      toast.error('노선 경유 정류소 정보를 불러오는데 실패했습니다.');
+    } finally {
+      setRouteStationsLoading(false);
     }
   };
 
@@ -412,49 +440,198 @@ function RouteDetailContent() {
 
 
 
-        {/* 전체 노선 경로 (더미 데이터) */}
+        {/* 전체 노선 경로 */}
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <div className="flex items-center gap-2 mb-4">
             <FiMap className="w-5 h-5 text-purple-600" />
             <h2 className="text-lg font-semibold text-gray-900">전체 노선 경로</h2>
-            <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">더미 데이터</span>
+            {routeStationsLoading && (
+              <span className="text-sm text-gray-500 bg-blue-100 px-2 py-1 rounded">로딩 중...</span>
+            )}
+            {!routeStationsLoading && routeStations.length > 0 && (
+              <span className="text-sm text-gray-500 bg-green-100 px-2 py-1 rounded">
+                총 {routeStations.length}개 정류장
+              </span>
+            )}
           </div>
           
-          <div className="space-y-2 max-h-96 overflow-y-auto">
-            {routeStations.map((station, index) => (
-              <div
-                key={station.stationId}
-                className={`flex items-center justify-between p-3 rounded-lg border transition-colors duration-200 ${
-                  station.stationId === stationId 
-                    ? 'bg-emerald-50 border-emerald-200' 
-                    : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                    station.stationId === stationId 
-                      ? 'bg-emerald-500 text-white' 
-                      : 'bg-gray-300 text-gray-600'
-                  }`}>
-                    {station.staOrder}
-                  </div>
-                  <div>
-                    <p className={`font-medium ${
-                      station.stationId === stationId ? 'text-emerald-900' : 'text-gray-900'
-                    }`}>
-                      {station.stationName}
-                    </p>
-                    {station.stationId === stationId && (
-                      <p className="text-sm text-emerald-600">현재 정류장</p>
+          {routeStationsLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mx-auto mb-4"></div>
+              <p className="text-gray-600">노선 경유 정류소를 불러오는 중...</p>
+            </div>
+          ) : routeStations.length === 0 ? (
+            <div className="text-center py-8">
+              <FiMap className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+              <p className="text-gray-600 mb-2">노선 경유 정류소 정보가 없습니다</p>
+              <p className="text-sm text-gray-500">API에서 데이터를 가져올 수 없습니다.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {/* 현재 정류장을 맨 위에 표시 */}
+              {(() => {
+                const currentStation = routeStations.find(station => station.stationId === stationId);
+                const otherStations = routeStations.filter(station => station.stationId !== stationId);
+                
+                return (
+                  <>
+                    {/* 현재 정류장 */}
+                    {currentStation && (
+                      <div className="mb-6">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                          <h3 className="text-sm font-semibold text-emerald-700">현재 위치</h3>
+                        </div>
+                        <div className="relative">
+                          <div className="bg-gradient-to-r from-emerald-50 to-green-50 border-2 border-emerald-200 rounded-xl p-4 shadow-sm">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-4">
+                                <div className="relative">
+                                  <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center text-white font-bold shadow-lg">
+                                    {currentStation.stationSeq}
+                                  </div>
+                                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-600 rounded-full flex items-center justify-center">
+                                    <span className="text-white text-xs">📍</span>
+                                  </div>
+                                </div>
+                                <div>
+                                  <p className="font-bold text-emerald-900 text-lg">{currentStation.stationName}</p>
+                                  <div className="flex items-center gap-3 mt-1">
+                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                                      현재 정류장
+                                    </span>
+                                    {currentStation.centerYn === 'Y' && (
+                                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                        중앙차로
+                                      </span>
+                                    )}
+                                    {currentStation.regionName && (
+                                      <span className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded-full">
+                                        {currentStation.regionName}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-lg font-bold text-emerald-700">{currentStation.distance}</p>
+                                <p className="text-xs text-gray-500">누적거리</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     )}
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-gray-600">{station.distance}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+
+                    {/* 전체 노선 경로 */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                        <h3 className="text-sm font-semibold text-gray-700">전체 노선 경로</h3>
+                        <span className="text-xs text-gray-500">({routeStations.length}개 정류장)</span>
+                      </div>
+                      
+                      <div className="max-h-80 overflow-y-auto space-y-2 pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                        {routeStations.map((station, index) => {
+                          const isCurrentStation = station.stationId === stationId;
+                          const isPreviousStation = index < routeStations.findIndex(s => s.stationId === stationId);
+                          const isNextStation = index > routeStations.findIndex(s => s.stationId === stationId);
+                          
+                          return (
+                            <div
+                              key={station.stationId}
+                              className={`relative flex items-center justify-between p-3 rounded-lg border transition-all duration-200 hover:shadow-sm ${
+                                isCurrentStation
+                                  ? 'bg-emerald-50 border-emerald-200 shadow-sm' 
+                                  : isPreviousStation
+                                  ? 'bg-blue-50 border-blue-200 opacity-75'
+                                  : isNextStation
+                                  ? 'bg-orange-50 border-orange-200'
+                                  : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                              }`}
+                            >
+                              {/* 연결선 */}
+                              {index < routeStations.length - 1 && (
+                                <div className={`absolute left-6 top-12 w-0.5 h-6 ${
+                                  isCurrentStation
+                                    ? 'bg-emerald-300'
+                                    : isPreviousStation
+                                    ? 'bg-blue-300'
+                                    : 'bg-gray-300'
+                                }`}></div>
+                              )}
+                              
+                              <div className="flex items-center gap-3 flex-1">
+                                <div className={`relative w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-sm ${
+                                  isCurrentStation
+                                    ? 'bg-emerald-500 text-white ring-4 ring-emerald-200' 
+                                    : isPreviousStation
+                                    ? 'bg-blue-500 text-white'
+                                    : isNextStation
+                                    ? 'bg-orange-500 text-white'
+                                    : 'bg-gray-400 text-white'
+                                }`}>
+                                  {station.stationSeq}
+                                  {isCurrentStation && (
+                                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-600 rounded-full"></div>
+                                  )}
+                                </div>
+                                
+                                <div className="flex-1 min-w-0">
+                                  <p className={`font-medium truncate ${
+                                    isCurrentStation ? 'text-emerald-900' : 'text-gray-900'
+                                  }`}>
+                                    {station.stationName}
+                                  </p>
+                                  
+                                  <div className="flex items-center gap-2 mt-1">
+                                    {isCurrentStation && (
+                                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-700">
+                                        현재
+                                      </span>
+                                    )}
+                                    {isPreviousStation && (
+                                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
+                                        지나온 곳
+                                      </span>
+                                    )}
+                                    {isNextStation && (
+                                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-700">
+                                        다음 정류장
+                                      </span>
+                                    )}
+                                    {station.centerYn === 'Y' && (
+                                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">
+                                        중앙차로
+                                      </span>
+                                    )}
+                                    {station.regionName && (
+                                      <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
+                                        {station.regionName}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <div className="text-right ml-3">
+                                <p className={`text-sm font-medium ${
+                                  isCurrentStation ? 'text-emerald-700' : 'text-gray-600'
+                                }`}>
+                                  {station.distance}
+                                </p>
+                                <p className="text-xs text-gray-400">누적</p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          )}
         </div>
 
         {/* 버스 정류장 지도 */}
