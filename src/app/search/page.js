@@ -7,7 +7,7 @@ import { FiSettings } from 'react-icons/fi';
 import SearchBar from '../../components/search/SearchBar';
 import SearchHistory from '../../components/search/SearchHistory';
 import { getBookmarkedStations, getBookmarkedRoutes } from '../../services/bookmarks';
-
+import { getBusArrivalItem } from '../../services/busArrival';
 import { addSearchHistory } from '../../services/search';
 import toast from 'react-hot-toast';
 
@@ -59,13 +59,183 @@ export default function SearchPage() {
     if (checkAuthStatus()) {
       loadBookmarkedStations();
       loadBookmarkedRoutes();
-
+      requestNotificationPermission();
     }
   }, [router]);
 
+  // 브라우저 알림 권한 요청
+  const requestNotificationPermission = async () => {
+    if ('Notification' in window) {
+      if (Notification.permission === 'default') {
+        try {
+          const permission = await Notification.requestPermission();
+          if (permission === 'granted') {
+            console.log('✅ 브라우저 알림 권한 허용됨');
+            toast.success('버스 도착 알림을 받을 수 있습니다!', {
+              duration: 3000,
+              style: {
+                background: '#10B981',
+                color: 'white',
+              },
+            });
+          } else {
+            console.log('⚠️ 브라우저 알림 권한 거부됨');
+          }
+        } catch (error) {
+          console.error('브라우저 알림 권한 요청 실패:', error);
+        }
+      } else if (Notification.permission === 'granted') {
+        console.log('✅ 브라우저 알림 권한 이미 허용됨');
+      }
+    } else {
+      console.log('⚠️ 브라우저에서 알림을 지원하지 않음');
+    }
+  };
 
+  // 즐겨찾기 노선이 로드되면 알림용 목록으로 복사
+  useEffect(() => {
+    if (bookmarkedRoutes && bookmarkedRoutes.length > 0) {
+      setActiveNotificationRoutes([...bookmarkedRoutes]);
+      console.log(`🚀 ${bookmarkedRoutes.length}개의 즐겨찾기 노선을 알림 목록으로 설정`);
+    } else {
+      setActiveNotificationRoutes([]);
+      console.log('📝 즐겨찾기한 노선이 없어 알림 목록을 비웁니다.');
+    }
+  }, [bookmarkedRoutes]);
 
+  // 알림용 노선 목록이 있을 때만 30초마다 버스 도착 정보 체크
+  useEffect(() => {
+    let helloInterval;
+    
+    if (activeNotificationRoutes && activeNotificationRoutes.length > 0) {
+      console.log(`🔔 ${activeNotificationRoutes.length}개의 노선에 대한 알림 체크 시작`);
+      
+      // 5초 후 첫 번째 체크 실행
+      setTimeout(() => {
+        checkAllRoutes();
+      }, 5000);
+      
+      // 30초마다 반복 실행
+      helloInterval = setInterval(checkAllRoutes, 30000);
+    } else {
+      console.log('📝 알림 대상 노선이 없어 알림 체크를 시작하지 않습니다.');
+    }
 
+    // 클린업 함수
+    return () => {
+      if (helloInterval) {
+        clearInterval(helloInterval);
+        console.log('🛑 버스 알림 체크 중지');
+      }
+    };
+  }, [activeNotificationRoutes]);
+
+  // 알림용 노선 목록의 버스 도착 정보를 확인하는 함수
+  const checkAllRoutes = async () => {
+    if (!activeNotificationRoutes || activeNotificationRoutes.length === 0) {
+      console.log('📝 알림 대상 노선이 없습니다. 알림 체크를 건너뜁니다.');
+      return;
+    }
+
+    console.log(`🚌 ${activeNotificationRoutes.length}개의 알림 대상 노선에 대한 도착 정보 조회 시작`);
+    
+    const routesToRemove = []; // 알림 후 제거할 노선들
+    
+    // 각 알림 대상 노선에 대해 도착 정보 확인
+    for (let i = 0; i < activeNotificationRoutes.length; i++) {
+      const route = activeNotificationRoutes[i];
+      try {
+        const busConfig = {
+          routeId: route.routeId,
+          stationId: route.stationId, 
+          staOrder: route.staOrder || 1,
+          alertMinutes: 3, // 3분 이내 알림
+          stationName: route.stationName,
+          routeName: route.routeName || route.routeNumber
+        };
+
+        console.log(`🔍 ${busConfig.routeName}번 버스 도착 정보 조회 중...`);
+        
+        const response = await getBusArrivalItem(busConfig.routeId, busConfig.stationId, busConfig.staOrder);
+        
+        if (response.success && response.data) {
+          const busInfo = response.data;
+          
+          // 가장 먼저 오는 버스의 도착 시간 (분 단위)
+          const firstBusTime = busInfo.predictTime1;
+          const routeName = busInfo.routeName || busConfig.routeName;
+          const stationName = busConfig.stationName;
+          
+          console.log(`🚌 ${routeName}번 버스 정보:`, {
+            '첫 번째 버스 도착 시간': `${firstBusTime}분`,
+            '두 번째 버스 도착 시간': `${busInfo.predictTime2}분`,
+            '정류장': stationName
+          });
+          
+          // 3분 이하로 남았다면 알림 표시하고 목록에서 제거
+          if (firstBusTime <= busConfig.alertMinutes && firstBusTime > 0) {
+            console.log(`🚨 알림 조건 만족! ${routeName}번 버스가 ${firstBusTime}분 후 도착합니다!`);
+            
+            // 토스트 알림 표시
+            toast.success(
+              `🚌 ${routeName}번 버스가 ${firstBusTime}분 후 ${stationName}에 도착합니다!`,
+              {
+                duration: 6000,
+                style: {
+                  background: '#10B981',
+                  color: 'white',
+                  fontWeight: 'bold',
+                },
+              }
+            );
+            
+            // 브라우저 알림
+            if ('Notification' in window && Notification.permission === 'granted') {
+              new Notification(`🚌 ${routeName}번 버스 도착 알림`, {
+                body: `${firstBusTime}분 후 ${stationName}에 도착 예정`,
+                icon: '/favicon.ico',
+                tag: `bus_${routeName}_${busConfig.stationId}`,
+                requireInteraction: false
+              });
+            }
+            
+            // 알림을 보낸 노선을 제거 목록에 추가
+            routesToRemove.push(i);
+            console.log(`✅ ${routeName}번 버스(${stationName}) 알림 완료. 목록에서 제거 예정.`);
+          } else {
+            console.log(`⏰ ${routeName}번 버스는 ${firstBusTime}분 후 도착 예정 (알림 기준: ${busConfig.alertMinutes}분 이하)`);
+          }
+          
+        } else {
+          console.warn(`⚠️ ${busConfig.routeName}번 버스 도착 정보가 없습니다:`, response.message);
+        }
+        
+      } catch (error) {
+        console.error(`🔥 ${route.routeName || route.routeNumber}번 버스 도착 정보 조회 실패:`, error);
+      }
+
+      // API 호출 간 500ms 대기
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    
+    // 알림을 보낸 노선들을 목록에서 제거 (인덱스 역순으로 제거)
+    if (routesToRemove.length > 0) {
+      setActiveNotificationRoutes(prevRoutes => {
+        const newRoutes = [...prevRoutes];
+        // 인덱스를 역순으로 정렬해서 제거 (인덱스 변경 방지)
+        routesToRemove.sort((a, b) => b - a).forEach(index => {
+          const removedRoute = newRoutes[index];
+          console.log(`🗑️ ${removedRoute.routeName || removedRoute.routeNumber}번 노선을 알림 목록에서 제거`);
+          newRoutes.splice(index, 1);
+        });
+        return newRoutes;
+      });
+      
+      console.log(`📤 ${routesToRemove.length}개 노선이 알림 목록에서 제거됨`);
+    }
+    
+    console.log('✅ 모든 알림 대상 노선의 도착 정보 체크 완료');
+  };
 
   const loadBookmarkedStations = async () => {
     try {
@@ -424,14 +594,25 @@ export default function SearchPage() {
                   <div 
                     key={`${route.routeId}-${route.stationId}`} 
                     className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow duration-200 cursor-pointer"
-                    onClick={() => {
-                      // 노선 상세 페이지로 이동하는 로직을 여기에 추가할 수 있습니다
-                      // 현재는 정류장 상세 페이지로 이동하는 예시입니다
-                      const stationId = route.stationId;
-                      const stationName = route.stationName || '정류장';
-                      const encodedStationName = encodeURIComponent(stationName);
-                      window.location.href = `/search/stations/${stationId}?name=${encodedStationName}`;
-                    }}
+                                         onClick={() => {
+                       // 노선 상세 페이지로 이동
+                       const routeId = route.routeId;
+                       const stationId = route.stationId;
+                       const staOrder = route.staOrder || 1;
+                       const routeName = route.routeName || route.routeNumber || '';
+                       const routeNumber = route.routeNumber || route.routeName || '';
+                       const stationName = route.stationName || '';
+                       
+                       const params = new URLSearchParams({
+                         stationId: stationId.toString(),
+                         staOrder: staOrder.toString(),
+                         routeName: routeName,
+                         routeNumber: routeNumber,
+                         stationName: stationName
+                       });
+                       
+                       window.location.href = `/routes/${routeId}?${params.toString()}`;
+                     }}
                   >
                     <div className="flex items-center gap-3">
                       <div className={`px-2 py-1 rounded text-xs font-medium text-white ${
