@@ -38,7 +38,7 @@ export default function SearchPage() {
     }
   };
 
-  useEffect(() => {
+    useEffect(() => {
     // 로그인 상태 확인
     const checkAuthStatus = () => {
       const existingUserId = localStorage.getItem('userId');
@@ -55,12 +55,153 @@ export default function SearchPage() {
       return true;
     };
 
-                     if (checkAuthStatus()) {
-          loadBookmarkedStations();
-          loadBookmarkedRoutes();
-          loadUnreadNotificationCount();
-        }
+    if (checkAuthStatus()) {
+      loadBookmarkedStations();
+      loadBookmarkedRoutes();
+      loadUnreadNotificationCount();
+    }
   }, [router]);
+
+  // 즐겨찾기 노선이 로드되면 알림 체크 시작
+  useEffect(() => {
+    let helloInterval;
+
+    // 즐겨찾기한 노선이 있을 때만 알림 체크 시작
+    if (bookmarkedRoutes && bookmarkedRoutes.length > 0) {
+      console.log(`🚀 ${bookmarkedRoutes.length}개의 즐겨찾기 노선에 대한 알림 체크 시작`);
+      
+      // 즉시 한 번 실행
+      checkAllRoutes();
+      
+      // 30초마다 실행
+      helloInterval = setInterval(checkAllRoutes, 30000);
+    } else {
+      console.log('📝 즐겨찾기한 노선이 없어 알림 체크를 시작하지 않습니다.');
+    }
+
+    // 클린업 함수
+    return () => {
+      if (helloInterval) {
+        clearInterval(helloInterval);
+        console.log('🛑 버스 알림 체크 중지');
+      }
+    };
+  }, [bookmarkedRoutes]); // bookmarkedRoutes가 변경될 때마다 실행
+
+  // 모든 즐겨찾기 노선의 버스 도착 정보를 확인하는 함수
+  const checkAllRoutes = async () => {
+    if (!bookmarkedRoutes || bookmarkedRoutes.length === 0) {
+      console.log('📝 즐겨찾기한 노선이 없습니다. 알림 체크를 건너뜁니다.');
+      return;
+    }
+
+    console.log(`🚌 ${bookmarkedRoutes.length}개의 즐겨찾기 노선에 대한 도착 정보 조회 시작`);
+    
+    // 각 즐겨찾기 노선에 대해 도착 정보 확인
+    for (const route of bookmarkedRoutes) {
+      try {
+        const busConfig = {
+          routeId: route.routeId,
+          stationId: route.stationId, 
+          staOrder: route.staOrder || '1', // staOrder가 없으면 기본값 1
+          alertMinutes: 5, // 알림 설정 시간 (분)
+          stationName: route.stationName,
+          routeName: route.routeName || route.routeNumber
+        };
+
+        console.log(`🔍 ${busConfig.routeName}번 버스 도착 정보 조회 중...`, {
+          routeId: busConfig.routeId,
+          stationId: busConfig.stationId,
+          stationName: busConfig.stationName
+        });
+        
+        // 정류장 검색과 동일한 방식으로 API 라우트를 통해 호출
+        const response = await fetch('/api/bus/arrival', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            routeId: busConfig.routeId,
+            stationId: busConfig.stationId,
+            staOrder: busConfig.staOrder
+          })
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.warn(`⚠️ ${busConfig.routeName}번 버스 API 호출 실패:`, errorData.message);
+          continue; // 다음 노선으로 계속
+        }
+        
+        const data = await response.json();
+        
+        // API 응답 검증
+        if (data.success && data.data) {
+          const busInfo = data.data;
+          
+          // 가장 먼저 오는 버스의 도착 시간 (분 단위)
+          const firstBusTime = busInfo.predictTime1;
+          const routeName = busInfo.routeName || busConfig.routeName;
+          const stationName = busConfig.stationName;
+          
+          console.log(`🚌 ${routeName}번 버스 정보:`, {
+            '첫 번째 버스 도착 시간': `${firstBusTime}분`,
+            '두 번째 버스 도착 시간': `${busInfo.predictTime2}분`,
+            '정류장': stationName,
+            '목적지': busInfo.routeDestName
+          });
+          
+          // 설정한 시간보다 적게 남았다면 알림 표시
+          if (firstBusTime <= busConfig.alertMinutes && firstBusTime > 0) {
+            console.log(`🚨 알림 조건 만족! ${routeName}번 버스가 ${firstBusTime}분 후 도착합니다!`);
+            
+            // 토스트 알림 표시
+            toast.success(
+              `${firstBusTime}분 후 ${routeName}번 버스가 ${stationName}에 도착합니다!`,
+              {
+                duration: 8000,
+                icon: '🚌',
+                position: 'top-right',
+                style: {
+                  background: '#10B981',
+                  color: '#ffffff',
+                  fontWeight: 'bold'
+                }
+              }
+            );
+            
+            // 브라우저 알림도 표시 (권한이 있는 경우)
+            if ('Notification' in window && Notification.permission === 'granted') {
+              new Notification(`🚌 ${routeName}번 버스가 ${firstBusTime}분 후 도착합니다!`, {
+                body: `${stationName} 정류장`,
+                icon: '/favicon.ico',
+                tag: `bus_${routeName}_${busConfig.stationId}`,
+                requireInteraction: false
+              });
+            }
+          } else {
+            console.log(`⏰ ${routeName}번 버스는 ${firstBusTime}분 후 도착 예정 (알림 기준: ${busConfig.alertMinutes}분 이하)`);
+          }
+          
+        } else {
+          console.warn(`⚠️ ${busConfig.routeName}번 버스 도착 정보가 없습니다:`, data.message);
+        }
+        
+      } catch (error) {
+        console.error(`🔥 ${route.routeName || route.routeNumber}번 버스 도착 정보 조회 실패:`, {
+          error: error.message,
+          errorType: error.name,
+          route: route
+        });
+      }
+
+      // API 호출 간격을 두어 서버 부하 방지 (각 노선 간 1초 간격)
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    
+    console.log('✅ 모든 즐겨찾기 노선의 도착 정보 체크 완료');
+  };
 
   const loadBookmarkedStations = async () => {
     try {
@@ -223,6 +364,8 @@ export default function SearchPage() {
       router.push('/login');
     }, 1000);
   };
+
+  
 
   return (
     <div className="min-h-screen bg-gray-50">
