@@ -3,11 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Toaster } from 'react-hot-toast';
-import { FiBell } from 'react-icons/fi';
+import { FiSettings } from 'react-icons/fi';
 import SearchBar from '../../components/search/SearchBar';
 import SearchHistory from '../../components/search/SearchHistory';
 import { getBookmarkedStations, getBookmarkedRoutes } from '../../services/bookmarks';
-import { getUnreadNotificationCount } from '../../services/notifications';
+
 import { addSearchHistory } from '../../services/search';
 import toast from 'react-hot-toast';
 
@@ -59,183 +59,13 @@ export default function SearchPage() {
     if (checkAuthStatus()) {
       loadBookmarkedStations();
       loadBookmarkedRoutes();
-      loadUnreadNotificationCount();
+
     }
   }, [router]);
 
-  // 즐겨찾기 노선이 로드되면 알림용 목록으로 복사
-  useEffect(() => {
-    if (bookmarkedRoutes && bookmarkedRoutes.length > 0) {
-      setActiveNotificationRoutes([...bookmarkedRoutes]);
-      console.log(`🚀 ${bookmarkedRoutes.length}개의 즐겨찾기 노선을 알림 목록으로 설정`);
-    } else {
-      setActiveNotificationRoutes([]);
-      console.log('📝 즐겨찾기한 노선이 없어 알림 목록을 비웁니다.');
-    }
-  }, [bookmarkedRoutes]);
 
-  // 알림용 노선 목록이 있을 때만 30초마다 버스 도착 정보 체크
-  useEffect(() => {
-    let helloInterval;
-    
-    if (activeNotificationRoutes && activeNotificationRoutes.length > 0) {
-      console.log(`🔔 ${activeNotificationRoutes.length}개의 노선에 대한 알림 체크 시작`);
-      
-      // 즉시 한 번 실행
-      checkAllRoutes();
-      
-      // 30초마다 반복 실행
-      helloInterval = setInterval(checkAllRoutes, 30000);
-    } else {
-      console.log('📝 알림 대상 노선이 없어 알림 체크를 시작하지 않습니다.');
-    }
 
-    // 클린업 함수
-    return () => {
-      if (helloInterval) {
-        clearInterval(helloInterval);
-        console.log('🛑 버스 알림 체크 중지');
-      }
-    };
-  }, [activeNotificationRoutes]); // activeNotificationRoutes가 변경될 때마다 실행
 
-  // 알림용 노선 목록의 버스 도착 정보를 확인하는 함수
-  const checkAllRoutes = async () => {
-    if (!activeNotificationRoutes || activeNotificationRoutes.length === 0) {
-      console.log('📝 알림 대상 노선이 없습니다. 알림 체크를 건너뜁니다.');
-      return;
-    }
-
-    console.log(`🚌 ${activeNotificationRoutes.length}개의 알림 대상 노선에 대한 도착 정보 조회 시작`);
-    
-    const routesToRemove = []; // 알림 후 제거할 노선들
-    
-    // 각 알림 대상 노선에 대해 도착 정보 확인
-    for (let i = 0; i < activeNotificationRoutes.length; i++) {
-      const route = activeNotificationRoutes[i];
-      try {
-        const busConfig = {
-          routeId: route.routeId,
-          stationId: route.stationId, 
-          staOrder: route.staOrder || '1', // staOrder가 없으면 기본값 1
-          alertMinutes: 5, // 알림 설정 시간 (분)
-          stationName: route.stationName,
-          routeName: route.routeName || route.routeNumber
-        };
-
-        console.log(`🔍 ${busConfig.routeName}번 버스 도착 정보 조회 중...`, {
-          routeId: busConfig.routeId,
-          stationId: busConfig.stationId,
-          stationName: busConfig.stationName
-        });
-        
-        // 정류장 검색과 동일한 방식으로 API 라우트를 통해 호출
-        const response = await fetch('/api/bus/arrival', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            routeId: busConfig.routeId,
-            stationId: busConfig.stationId,
-            staOrder: busConfig.staOrder
-          })
-        });
-        
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          console.warn(`⚠️ ${busConfig.routeName}번 버스 API 호출 실패:`, errorData.message);
-          continue; // 다음 노선으로 계속
-        }
-        
-        const data = await response.json();
-        
-        // API 응답 검증
-        if (data.success && data.data) {
-          const busInfo = data.data;
-          
-          // 가장 먼저 오는 버스의 도착 시간 (분 단위)
-          const firstBusTime = busInfo.predictTime1;
-          const routeName = busInfo.routeName || busConfig.routeName;
-          const stationName = busConfig.stationName;
-          
-          console.log(`🚌 ${routeName}번 버스 정보:`, {
-            '첫 번째 버스 도착 시간': `${firstBusTime}분`,
-            '두 번째 버스 도착 시간': `${busInfo.predictTime2}분`,
-            '정류장': stationName,
-            '목적지': busInfo.routeDestName
-          });
-          
-          // 5분 이하로 남았다면 알림 표시하고 목록에서 제거
-          if (firstBusTime <= busConfig.alertMinutes && firstBusTime > 0) {
-            console.log(`🚨 알림 조건 만족! ${routeName}번 버스가 ${firstBusTime}분 후 도착합니다!`);
-            
-            // 토스트 알림 표시
-            toast.success(
-              `${firstBusTime}분 후 ${routeName}번 버스가 ${stationName}에 도착합니다!`,
-              {
-                duration: 8000,
-                icon: '🚌',
-                position: 'top-right',
-                style: {
-                  background: '#10B981',
-                  color: '#ffffff',
-                  fontWeight: 'bold'
-                }
-              }
-            );
-            
-            // 브라우저 알림
-            if ('Notification' in window && Notification.permission === 'granted') {
-              new Notification(`🚌 ${routeName}번 버스가 ${firstBusTime}분 후 도착합니다!`, {
-                body: `${stationName} 정류장`,
-                icon: '/favicon.ico',
-                tag: `bus_${routeName}_${busConfig.stationId}`,
-                requireInteraction: false
-              });
-            }
-            
-            // 알림을 보낸 노선을 제거 목록에 추가
-            routesToRemove.push(i);
-            console.log(`✅ ${routeName}번 버스(${stationName}) 알림 완료. 목록에서 제거 예정.`);
-          } else {
-            console.log(`⏰ ${routeName}번 버스는 ${firstBusTime}분 후 도착 예정 (알림 기준: ${busConfig.alertMinutes}분 이하)`);
-          }
-          
-        } else {
-          console.warn(`⚠️ ${busConfig.routeName}번 버스 도착 정보가 없습니다:`, data.message);
-        }
-        
-      } catch (error) {
-        console.error(`🔥 ${route.routeName || route.routeNumber}번 버스 도착 정보 조회 실패:`, {
-          error: error.message,
-          errorType: error.name,
-          route: route
-        });
-      }
-
-      // API 호출 간 1초 대기
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-    
-    // 알림을 보낸 노선들을 목록에서 제거 (인덱스 역순으로 제거)
-    if (routesToRemove.length > 0) {
-      setActiveNotificationRoutes(prevRoutes => {
-        const newRoutes = [...prevRoutes];
-        // 인덱스를 역순으로 정렬해서 제거 (인덱스 변경 방지)
-        routesToRemove.sort((a, b) => b - a).forEach(index => {
-          const removedRoute = newRoutes[index];
-          console.log(`🗑️ ${removedRoute.routeName || removedRoute.routeNumber}번 노선을 알림 목록에서 제거`);
-          newRoutes.splice(index, 1);
-        });
-        return newRoutes;
-      });
-      
-      console.log(`📤 ${routesToRemove.length}개 노선이 알림 목록에서 제거됨. 남은 노선: ${activeNotificationRoutes.length - routesToRemove.length}개`);
-    }
-    
-    console.log('✅ 모든 알림 대상 노선의 도착 정보 체크 완료');
-  };
 
   const loadBookmarkedStations = async () => {
     try {
@@ -421,17 +251,13 @@ export default function SearchPage() {
             <div className="flex items-center gap-3">
               <button 
                 onClick={() => router.push('/notifications')}
-                className="relative p-2 text-gray-600 hover:text-gray-900 transition-colors duration-200"
+                className="p-2 text-gray-600 hover:text-gray-900 transition-colors duration-200"
               >
                 <div className="flex items-center gap-1">
-                  <FiBell className="w-4 h-4" />
-                  <span className="text-sm">버스알림</span>
+                  <FiSettings className="w-4 h-4" />
+                  <span className="text-sm">알림설정</span>
                 </div>
-                {unreadNotificationCount > 0 && (
-                  <span className="absolute -top-1 -right-1 px-1.5 py-0.5 bg-red-500 text-white text-xs rounded-full min-w-[18px] text-center">
-                    {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
-                  </span>
-                )}
+
               </button>
               <button 
                 onClick={() => router.push('/mypage')}

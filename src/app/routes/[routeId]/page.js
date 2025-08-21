@@ -467,169 +467,46 @@ function RouteDetailContent() {
               <p className="text-sm text-gray-500">API에서 데이터를 가져올 수 없습니다.</p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {/* 현재 정류장을 맨 위에 표시 */}
-              {(() => {
-                const currentStation = routeStations.find(station => station.stationId === stationId);
-                const otherStations = routeStations.filter(station => station.stationId !== stationId);
-                
-                return (
-                  <>
-                    {/* 현재 정류장 */}
-                    {currentStation && (
-                      <div className="mb-6">
-                        <div className="flex items-center gap-2 mb-3">
-                          <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-                          <h3 className="text-sm font-semibold text-emerald-700">현재 위치</h3>
-                        </div>
-                        <div className="relative">
-                          <div className="bg-gradient-to-r from-emerald-50 to-green-50 border-2 border-emerald-200 rounded-xl p-4 shadow-sm">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-4">
-                                <div className="relative">
-                                  <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center text-white font-bold shadow-lg">
-                                    {currentStation.stationSeq}
-                                  </div>
-                                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-600 rounded-full flex items-center justify-center">
-                                    <span className="text-white text-xs">📍</span>
-                                  </div>
-                                </div>
-                                <div>
-                                  <p className="font-bold text-emerald-900 text-lg">{currentStation.stationName}</p>
-                                  <div className="flex items-center gap-3 mt-1">
-                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
-                                      현재 정류장
-                                    </span>
-                                    {currentStation.centerYn === 'Y' && (
-                                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                        중앙차로
-                                      </span>
-                                    )}
-                                    {currentStation.regionName && (
-                                      <span className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded-full">
-                                        {currentStation.regionName}
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <p className="text-lg font-bold text-emerald-700">{currentStation.distance}</p>
-                                <p className="text-xs text-gray-500">누적거리</p>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 전체 노선 경로 */}
-                    <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                        <h3 className="text-sm font-semibold text-gray-700">전체 노선 경로</h3>
-                        <span className="text-xs text-gray-500">({routeStations.length}개 정류장)</span>
-                      </div>
-                      
-                      <div className="max-h-80 overflow-y-auto space-y-2 pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                        {routeStations.map((station, index) => {
-                          const isCurrentStation = station.stationId === stationId;
-                          const isPreviousStation = index < routeStations.findIndex(s => s.stationId === stationId);
-                          const isNextStation = index > routeStations.findIndex(s => s.stationId === stationId);
-                          
-                          return (
-                            <div
-                              key={station.stationId}
-                              className={`relative flex items-center justify-between p-3 rounded-lg border transition-all duration-200 hover:shadow-sm ${
-                                isCurrentStation
-                                  ? 'bg-emerald-50 border-emerald-200 shadow-sm' 
-                                  : isPreviousStation
-                                  ? 'bg-blue-50 border-blue-200 opacity-75'
-                                  : isNextStation
-                                  ? 'bg-orange-50 border-orange-200'
-                                  : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
-                              }`}
-                            >
-                              {/* 연결선 */}
-                              {index < routeStations.length - 1 && (
-                                <div className={`absolute left-6 top-12 w-0.5 h-6 ${
-                                  isCurrentStation
-                                    ? 'bg-emerald-300'
-                                    : isPreviousStation
-                                    ? 'bg-blue-300'
-                                    : 'bg-gray-300'
-                                }`}></div>
-                              )}
-                              
-                              <div className="flex items-center gap-3 flex-1">
-                                <div className={`relative w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-sm ${
-                                  isCurrentStation
-                                    ? 'bg-emerald-500 text-white ring-4 ring-emerald-200' 
-                                    : isPreviousStation
-                                    ? 'bg-blue-500 text-white'
-                                    : isNextStation
-                                    ? 'bg-orange-500 text-white'
-                                    : 'bg-gray-400 text-white'
-                                }`}>
-                                  {station.stationSeq}
-                                  {isCurrentStation && (
-                                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-600 rounded-full"></div>
-                                  )}
-                                </div>
-                                
-                                <div className="flex-1 min-w-0">
-                                  <p className={`font-medium truncate ${
-                                    isCurrentStation ? 'text-emerald-900' : 'text-gray-900'
-                                  }`}>
-                                    {station.stationName}
-                                  </p>
-                                  
-                                  <div className="flex items-center gap-2 mt-1">
-                                    {isCurrentStation && (
-                                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-700">
-                                        현재
-                                      </span>
-                                    )}
-                                    {isPreviousStation && (
-                                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
-                                        지나온 곳
-                                      </span>
-                                    )}
-                                    {isNextStation && (
-                                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-700">
-                                        다음 정류장
-                                      </span>
-                                    )}
-                                    {station.centerYn === 'Y' && (
-                                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">
-                                        중앙차로
-                                      </span>
-                                    )}
-                                    {station.regionName && (
-                                      <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
-                                        {station.regionName}
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                              
-                              <div className="text-right ml-3">
-                                <p className={`text-sm font-medium ${
-                                  isCurrentStation ? 'text-emerald-700' : 'text-gray-600'
-                                }`}>
-                                  {station.distance}
-                                </p>
-                                <p className="text-xs text-gray-400">누적</p>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {routeStations.map((station, index) => (
+                <div
+                  key={station.stationId}
+                  className={`flex items-center justify-between p-3 rounded-lg border transition-colors duration-200 ${
+                    station.stationId === stationId 
+                      ? 'bg-emerald-50 border-emerald-200' 
+                      : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                      station.stationId === stationId 
+                        ? 'bg-emerald-500 text-white' 
+                        : 'bg-gray-300 text-gray-600'
+                    }`}>
+                      {station.stationSeq}
                     </div>
-                  </>
-                );
-              })()}
+                    <div>
+                      <p className={`font-medium ${
+                        station.stationId === stationId ? 'text-emerald-900' : 'text-gray-900'
+                      }`}>
+                        {station.stationName}
+                      </p>
+                      {station.stationId === stationId && (
+                        <p className="text-sm text-emerald-600">현재 정류장</p>
+                      )}
+                      {station.regionName && (
+                        <p className="text-xs text-gray-500">{station.regionName}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-gray-600">{station.distance}</p>
+                    {station.centerYn === 'Y' && (
+                      <p className="text-xs text-red-500">중앙차로</p>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
