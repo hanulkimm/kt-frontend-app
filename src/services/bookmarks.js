@@ -257,12 +257,11 @@ export const checkBookmarkStatus = async (stationId) => {
 
 /**
  * 노선 즐겨찾기 추가
- * @param {string} routeId - 노선 ID
- * @param {object} routeData - 노선 정보
+ * @param {object} bookmarkData - 즐겨찾기 데이터 (routeId, routeName, routeNumber, stationId, stationName, staOrder 포함)
  * @returns {Promise} API 응답
  */
-export const addRouteBookmark = async (routeId, routeData, stationId, stationName) => {
-  console.log('⭐ 노선 즐겨찾기 추가 시작 - routeId:', routeId, 'routeData:', routeData, 'stationId:', stationId, 'stationName:', stationName);
+export const addRouteBookmark = async (bookmarkData) => {
+  console.log('⭐ 노선 즐겨찾기 추가 시작 - bookmarkData:', bookmarkData);
   
   try {
     const userId = localStorage.getItem('userId');
@@ -275,8 +274,14 @@ export const addRouteBookmark = async (routeId, routeData, stationId, stationNam
     }
     
     // 필수 데이터 추출
-    const routeName = routeData?.routeName || routeData?.name || `노선 ${routeId}`;
-    const routeNumber = routeData?.routeNumber || routeData?.routeName || routeId;
+    const {
+      routeId,
+      routeName,
+      routeNumber,
+      stationId,
+      stationName,
+      staOrder
+    } = bookmarkData;
     
     const requestBody = {
       userId: userIdNum,
@@ -284,7 +289,8 @@ export const addRouteBookmark = async (routeId, routeData, stationId, stationNam
       routeName: routeName,
       routeNumber: routeNumber,
       stationId: stationId,
-      stationName: stationName
+      stationName: stationName,
+      staOrder: staOrder
     };
     
     console.log('📡 요청 데이터:', requestBody);
@@ -424,9 +430,10 @@ export const getBookmarkedRoutes = async (userId) => {
 /**
  * 노선 즐겨찾기 상태 확인
  * @param {string} routeId - 노선 ID
+ * @param {string} stationId - 정류장 ID
  * @returns {Promise} API 응답
  */
-export const checkRouteBookmarkStatus = async (routeId) => {
+export const checkRouteBookmarkStatus = async (routeId, stationId) => {
   try {
     const userId = localStorage.getItem('userId');
     
@@ -457,9 +464,10 @@ export const checkRouteBookmarkStatus = async (routeId) => {
       throw new Error(result.message || 'API 호출 실패');
     }
     
-    // 즐겨찾기 목록에서 해당 routeId가 있는지 확인 (새 스키마에서는 routeId 필드 사용)
+    // 즐겨찾기 목록에서 해당 routeId와 stationId가 모두 일치하는지 확인
     const isBookmarked = result.data?.some(bookmark => 
-      bookmark.routeId === routeId || bookmark.targetId === routeId
+      (bookmark.routeId === routeId || bookmark.targetId === routeId) &&
+      (bookmark.stationId === stationId)
     ) || false;
     
     return {

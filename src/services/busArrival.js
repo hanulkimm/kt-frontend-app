@@ -55,6 +55,40 @@ export const getBusArrivalList = async (stationId) => {
 };
 
 /**
+ * 특정 노선의 버스 도착 정보 조회 (노선 상세 페이지용)
+ * @param {string} routeId - 노선 ID
+ * @param {string} stationId - 정류장 ID
+ * @param {string} staOrder - 정류장 순서
+ * @returns {Promise} API 응답
+ */
+export const getBusArrivalItem = async (routeId, stationId, staOrder) => {
+  try {
+    const response = await fetch('/api/bus/arrival', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ routeId, stationId, staOrder })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('버스 도착 정보 조회 오류:', error);
+    throw {
+      success: false,
+      message: error.message || '버스 도착 정보를 불러오는데 실패했습니다.',
+      data: null
+    };
+  }
+};
+
+/**
  * 특정 노선의 버스 도착 정보 조회 (알림용)
  * @param {string} stationId - 정류장 ID
  * @returns {Promise} API 응답

@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { FiClock, FiUsers, FiMapPin, FiHeart } from 'react-icons/fi';
+import { useRouter } from 'next/navigation';
+import { FiClock, FiUsers, FiMapPin, FiHeart, FiArrowRight } from 'react-icons/fi';
 import { getBusTypeInfo, getCrowdedInfo, getLowPlateInfo } from '../../services/busArrival';
 import { addRouteBookmark, removeRouteBookmark, checkRouteBookmarkStatus } from '../../services/bookmarks';
 import toast from 'react-hot-toast';
 
-const BusArrivalItem = ({ busRoute, stationId, stationName, onRouteClick }) => {
+const BusArrivalItem = ({ busRoute, stationId, stationName, onRouteClick, staOrder }) => {
+  const router = useRouter();
   const busTypeInfo = getBusTypeInfo(busRoute.routeTypeCd);
   const [isBookmarked, setIsBookmarked] = useState(false);
 
@@ -16,7 +18,7 @@ const BusArrivalItem = ({ busRoute, stationId, stationName, onRouteClick }) => {
 
   const checkBookmark = async () => {
     try {
-      const response = await checkRouteBookmarkStatus(busRoute.routeId);
+      const response = await checkRouteBookmarkStatus(busRoute.routeId, stationId);
       if (response.success) {
         setIsBookmarked(response.data.isBookmarked);
       }
@@ -39,8 +41,17 @@ const BusArrivalItem = ({ busRoute, stationId, stationName, onRouteClick }) => {
           toast.error(response.message);
         }
       } else {
-        // 추가 시에는 routeData, stationId, stationName 모두 필요
-        const response = await addRouteBookmark(busRoute.routeId, busRoute, stationId, stationName);
+        // 추가 시에는 bookmarkData 객체로 전달
+        const bookmarkData = {
+          routeId: busRoute.routeId,
+          routeName: busRoute.routeName,
+          routeNumber: busRoute.routeName, // routeNumber가 없으면 routeName 사용
+          stationId: stationId,
+          stationName: stationName,
+          staOrder: staOrder || 1 // 기본값 설정
+        };
+        
+        const response = await addRouteBookmark(bookmarkData);
         if (response.success) {
           setIsBookmarked(true);
           toast.success('노선이 즐겨찾기에 추가되었습니다.');
@@ -52,6 +63,19 @@ const BusArrivalItem = ({ busRoute, stationId, stationName, onRouteClick }) => {
       console.error('노선 즐겨찾기 처리 실패:', error);
       toast.error(error.message || '즐겨찾기 처리에 실패했습니다.');
     }
+  };
+
+  // 노선 상세 페이지로 이동
+  const handleRouteClick = () => {
+    const params = new URLSearchParams({
+      routeName: busRoute.routeName,
+      routeNumber: busRoute.routeName, // routeNumber가 없으면 routeName 사용
+      stationId: stationId,
+      stationName: stationName,
+      staOrder: staOrder || 1
+    });
+    
+    router.push(`/routes/${busRoute.routeId}?${params.toString()}`);
   };
 
   // 현재 시간에 예상 도착 시간을 더해서 실제 도착 시간 계산
@@ -146,7 +170,10 @@ const BusArrivalItem = ({ busRoute, stationId, stationName, onRouteClick }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+    <div 
+      className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-200 cursor-pointer"
+      onClick={handleRouteClick}
+    >
       {/* 노선 헤더 */}
       <div className="flex items-center justify-between p-4 border-b border-gray-100">
         <div className="flex items-center gap-3">
@@ -162,7 +189,7 @@ const BusArrivalItem = ({ busRoute, stationId, stationName, onRouteClick }) => {
           </div>
         </div>
 
-        {/* 즐겨찾기 + 알림 설정 */}
+        {/* 즐겨찾기 + 화살표 */}
         <div className="flex items-center gap-2">
           <button
             onClick={handleBookmarkToggle}
@@ -174,10 +201,7 @@ const BusArrivalItem = ({ busRoute, stationId, stationName, onRouteClick }) => {
             <FiHeart className={`w-5 h-5 ${isBookmarked ? 'fill-current' : ''}`} />
           </button>
           
-          <button className="flex items-center gap-1 px-3 py-1 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors duration-200">
-            <span>🔔</span>
-            <span>알림설정</span>
-          </button>
+          <FiArrowRight className="w-5 h-5 text-gray-400" />
         </div>
       </div>
 

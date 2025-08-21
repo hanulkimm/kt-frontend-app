@@ -97,19 +97,10 @@ const KakaoMap = ({ stations = [], center, onStationClick, className = "" }) => 
 
     stations.forEach((station, index) => {
       const position = new window.kakao.maps.LatLng(station.latitude, station.longitude);
-      
-      // 마커 이미지 설정 (중앙차로는 빨간색, 일반차로는 파란색) - 더 크고 선명하게
-      const imageSrc = station.centerYn === 'Y' 
-        ? 'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_red.png'
-        : 'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png';
-      
-      const imageSize = new window.kakao.maps.Size(42, 48); // 적당한 크기로 조정
-      const markerImage = new window.kakao.maps.MarkerImage(imageSrc, imageSize);
 
-      // 마커 생성
+      // 카카오맵 기본 마커 사용 (이미지 설정 없이)
       const marker = new window.kakao.maps.Marker({
         position: position,
-        image: markerImage,
         title: station.name
       });
 
@@ -187,16 +178,12 @@ const KakaoMap = ({ stations = [], center, onStationClick, className = "" }) => 
     <div className={`relative ${className}`}>
       <div ref={mapRef} className="w-full h-full rounded-lg"></div>
       
-      {/* 지도 범례 - 더 눈에 잘 보이게 */}
+      {/* 지도 범례 - 기본 마커 사용으로 단순화 */}
       <div className="absolute top-4 left-4 bg-white rounded-lg shadow-lg border border-gray-200 p-4 text-sm">
-        <div className="font-medium text-gray-700 mb-2">마커 구분</div>
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-4 h-4 bg-red-500 rounded-full shadow-sm"></div>
-          <span className="text-gray-600">중앙차로</span>
-        </div>
+        <div className="font-medium text-gray-700 mb-2">정류장 위치</div>
         <div className="flex items-center gap-3">
-          <div className="w-4 h-4 bg-blue-500 rounded-full shadow-sm"></div>
-          <span className="text-gray-600">일반차로</span>
+          <div className="w-4 h-4 bg-red-500 rounded-full shadow-sm"></div>
+          <span className="text-gray-600">버스 정류장</span>
         </div>
       </div>
 
