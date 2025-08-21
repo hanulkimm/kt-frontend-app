@@ -68,7 +68,7 @@ const BusArrivalItem = ({ busRoute, stationId, stationName, onRouteClick }) => {
   };
   
   const renderBusInfo = (busInfo, label) => {
-    if (!busInfo.plateNo && !busInfo.predictTime) {
+    if (!busInfo || (!busInfo.plateNo && !busInfo.predictTime)) {
       return null;
     }
 
@@ -187,7 +187,7 @@ const BusArrivalItem = ({ busRoute, stationId, stationName, onRouteClick }) => {
         {renderBusInfo(busRoute.bus1, '첫 번째')}
         
         {/* 구분선 */}
-        {(busRoute.bus1.plateNo || busRoute.bus1.predictTime) && (busRoute.bus2.plateNo || busRoute.bus2.predictTime) && (
+        {(busRoute.bus1?.plateNo || busRoute.bus1?.predictTime) && (busRoute.bus2?.plateNo || busRoute.bus2?.predictTime) && (
           <div className="border-t border-gray-100"></div>
         )}
         

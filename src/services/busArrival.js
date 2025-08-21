@@ -23,7 +23,39 @@ busArrivalAPI.interceptors.response.use(
 );
 
 /**
- * 정류장의 버스 도착 정보 조회
+ * 정류장의 모든 버스 노선 목록 조회 (정류장 상세 페이지용)
+ * @param {string} stationId - 정류장 ID
+ * @returns {Promise} API 응답
+ */
+export const getBusArrivalList = async (stationId) => {
+  try {
+    const response = await fetch('/api/bus/arrival/list', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ stationId })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('정류장 버스 목록 조회 오류:', error);
+    throw {
+      success: false,
+      message: error.message || '정류장의 버스 목록을 불러오는데 실패했습니다.',
+      data: null
+    };
+  }
+};
+
+/**
+ * 특정 노선의 버스 도착 정보 조회 (알림용)
  * @param {string} stationId - 정류장 ID
  * @returns {Promise} API 응답
  */

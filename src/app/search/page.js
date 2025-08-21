@@ -19,6 +19,7 @@ export default function SearchPage() {
   const [bookmarksLoading, setBookmarksLoading] = useState(true);
   const [routesLoading, setRoutesLoading] = useState(true);
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+  const [activeNotificationRoutes, setActiveNotificationRoutes] = useState([]); // 알림용 노선 목록 (알림 후 제거됨)
 
   // 한글 디코딩 유틸리티 함수
   const decodeKoreanText = (text) => {
@@ -62,21 +63,31 @@ export default function SearchPage() {
     }
   }, [router]);
 
-  // 즐겨찾기 노선이 로드되면 알림 체크 시작
+  // 즐겨찾기 노선이 로드되면 알림용 목록으로 복사
+  useEffect(() => {
+    if (bookmarkedRoutes && bookmarkedRoutes.length > 0) {
+      setActiveNotificationRoutes([...bookmarkedRoutes]);
+      console.log(`🚀 ${bookmarkedRoutes.length}개의 즐겨찾기 노선을 알림 목록으로 설정`);
+    } else {
+      setActiveNotificationRoutes([]);
+      console.log('📝 즐겨찾기한 노선이 없어 알림 목록을 비웁니다.');
+    }
+  }, [bookmarkedRoutes]);
+
+  // 알림용 노선 목록이 있을 때만 30초마다 버스 도착 정보 체크
   useEffect(() => {
     let helloInterval;
-
-    // 즐겨찾기한 노선이 있을 때만 알림 체크 시작
-    if (bookmarkedRoutes && bookmarkedRoutes.length > 0) {
-      console.log(`🚀 ${bookmarkedRoutes.length}개의 즐겨찾기 노선에 대한 알림 체크 시작`);
+    
+    if (activeNotificationRoutes && activeNotificationRoutes.length > 0) {
+      console.log(`🔔 ${activeNotificationRoutes.length}개의 노선에 대한 알림 체크 시작`);
       
       // 즉시 한 번 실행
       checkAllRoutes();
       
-      // 30초마다 실행
+      // 30초마다 반복 실행
       helloInterval = setInterval(checkAllRoutes, 30000);
     } else {
-      console.log('📝 즐겨찾기한 노선이 없어 알림 체크를 시작하지 않습니다.');
+      console.log('📝 알림 대상 노선이 없어 알림 체크를 시작하지 않습니다.');
     }
 
     // 클린업 함수
@@ -86,19 +97,22 @@ export default function SearchPage() {
         console.log('🛑 버스 알림 체크 중지');
       }
     };
-  }, [bookmarkedRoutes]); // bookmarkedRoutes가 변경될 때마다 실행
+  }, [activeNotificationRoutes]); // activeNotificationRoutes가 변경될 때마다 실행
 
-  // 모든 즐겨찾기 노선의 버스 도착 정보를 확인하는 함수
+  // 알림용 노선 목록의 버스 도착 정보를 확인하는 함수
   const checkAllRoutes = async () => {
-    if (!bookmarkedRoutes || bookmarkedRoutes.length === 0) {
-      console.log('📝 즐겨찾기한 노선이 없습니다. 알림 체크를 건너뜁니다.');
+    if (!activeNotificationRoutes || activeNotificationRoutes.length === 0) {
+      console.log('📝 알림 대상 노선이 없습니다. 알림 체크를 건너뜁니다.');
       return;
     }
 
-    console.log(`🚌 ${bookmarkedRoutes.length}개의 즐겨찾기 노선에 대한 도착 정보 조회 시작`);
+    console.log(`🚌 ${activeNotificationRoutes.length}개의 알림 대상 노선에 대한 도착 정보 조회 시작`);
     
-    // 각 즐겨찾기 노선에 대해 도착 정보 확인
-    for (const route of bookmarkedRoutes) {
+    const routesToRemove = []; // 알림 후 제거할 노선들
+    
+    // 각 알림 대상 노선에 대해 도착 정보 확인
+    for (let i = 0; i < activeNotificationRoutes.length; i++) {
+      const route = activeNotificationRoutes[i];
       try {
         const busConfig = {
           routeId: route.routeId,
@@ -152,7 +166,7 @@ export default function SearchPage() {
             '목적지': busInfo.routeDestName
           });
           
-          // 설정한 시간보다 적게 남았다면 알림 표시
+          // 5분 이하로 남았다면 알림 표시하고 목록에서 제거
           if (firstBusTime <= busConfig.alertMinutes && firstBusTime > 0) {
             console.log(`🚨 알림 조건 만족! ${routeName}번 버스가 ${firstBusTime}분 후 도착합니다!`);
             
@@ -171,7 +185,7 @@ export default function SearchPage() {
               }
             );
             
-            // 브라우저 알림도 표시 (권한이 있는 경우)
+            // 브라우저 알림
             if ('Notification' in window && Notification.permission === 'granted') {
               new Notification(`🚌 ${routeName}번 버스가 ${firstBusTime}분 후 도착합니다!`, {
                 body: `${stationName} 정류장`,
@@ -180,6 +194,10 @@ export default function SearchPage() {
                 requireInteraction: false
               });
             }
+            
+            // 알림을 보낸 노선을 제거 목록에 추가
+            routesToRemove.push(i);
+            console.log(`✅ ${routeName}번 버스(${stationName}) 알림 완료. 목록에서 제거 예정.`);
           } else {
             console.log(`⏰ ${routeName}번 버스는 ${firstBusTime}분 후 도착 예정 (알림 기준: ${busConfig.alertMinutes}분 이하)`);
           }
@@ -196,11 +214,27 @@ export default function SearchPage() {
         });
       }
 
-      // API 호출 간격을 두어 서버 부하 방지 (각 노선 간 1초 간격)
+      // API 호출 간 1초 대기
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
     
-    console.log('✅ 모든 즐겨찾기 노선의 도착 정보 체크 완료');
+    // 알림을 보낸 노선들을 목록에서 제거 (인덱스 역순으로 제거)
+    if (routesToRemove.length > 0) {
+      setActiveNotificationRoutes(prevRoutes => {
+        const newRoutes = [...prevRoutes];
+        // 인덱스를 역순으로 정렬해서 제거 (인덱스 변경 방지)
+        routesToRemove.sort((a, b) => b - a).forEach(index => {
+          const removedRoute = newRoutes[index];
+          console.log(`🗑️ ${removedRoute.routeName || removedRoute.routeNumber}번 노선을 알림 목록에서 제거`);
+          newRoutes.splice(index, 1);
+        });
+        return newRoutes;
+      });
+      
+      console.log(`📤 ${routesToRemove.length}개 노선이 알림 목록에서 제거됨. 남은 노선: ${activeNotificationRoutes.length - routesToRemove.length}개`);
+    }
+    
+    console.log('✅ 모든 알림 대상 노선의 도착 정보 체크 완료');
   };
 
   const loadBookmarkedStations = async () => {

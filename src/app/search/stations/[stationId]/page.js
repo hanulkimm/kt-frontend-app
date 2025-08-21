@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Toaster } from 'react-hot-toast';
 import { FiArrowLeft, FiMapPin, FiRefreshCw, FiClock, FiHeart, FiStar, FiMessageSquare, FiPlus } from 'react-icons/fi';
 import BusArrivalItem from '../../../../components/bus/BusArrivalItem';
-import { getBusArrivalInfo } from '../../../../services/busArrival';
+import { getBusArrivalList } from '../../../../services/busArrival';
 import { addStationBookmark, removeStationBookmark, checkBookmarkStatus } from '../../../../services/bookmarks';
 import { getReviewsByTarget, createReview } from '../../../../services/reviews';
 import { searchStations } from '../../../../services/search';
@@ -154,7 +154,7 @@ function StationDetailContent() {
         setLoading(true);
       }
       
-      const response = await getBusArrivalInfo(stationId);
+      const response = await getBusArrivalList(stationId);
       
       if (response.success) {
         setBusArrivals(response.data || []);
