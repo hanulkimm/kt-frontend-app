@@ -157,6 +157,27 @@ function StationDetailContent() {
       const response = await getBusArrivalList(stationId);
       
       if (response.success) {
+        console.log('🚌 버스 도착 정보 응답:', response);
+        console.log('🚌 버스 데이터 구조:', response.data);
+        response.data?.forEach((bus, index) => {
+          console.log(`🚌 버스 ${index + 1}:`, {
+            routeName: bus.routeName,
+            bus1: bus.bus1,
+            bus2: bus.bus2,
+            flag: bus.flag
+          });
+          
+          // 103번과 341번 버스 특별 추적
+          if (bus.routeName == 103 || bus.routeName == 341) {
+            console.log(`🔍 [특별추적] ${bus.routeName}번 버스 상세:`, {
+              routeName: bus.routeName,
+              flag: bus.flag,
+              bus1: bus.bus1,
+              bus2: bus.bus2,
+              '원본데이터추정': '브라우저 네트워크 탭에서 /api/bus/arrival/list 확인'
+            });
+          }
+        });
         setBusArrivals(response.data || []);
         setLastUpdated(new Date());
         
@@ -386,7 +407,20 @@ function StationDetailContent() {
               >
                 <FiClock className="w-4 h-4" />
                 <span className="font-medium">실시간 도착정보</span>
-                <span className="text-sm">({busArrivals.length})</span>
+                <span className="text-sm">
+                  ({busArrivals.filter(bus => {
+                    const hasValidPredictTime = (
+                      (bus.bus1?.predictTime !== null && bus.bus1?.predictTime !== undefined && bus.bus1.predictTime > 0) ||
+                      (bus.bus2?.predictTime !== null && bus.bus2?.predictTime !== undefined && bus.bus2.predictTime > 0)
+                    );
+                    const hasValidPlateNo = (
+                      (bus.bus1?.plateNo !== null && bus.bus1?.plateNo !== undefined && bus.bus1.plateNo !== '') ||
+                      (bus.bus2?.plateNo !== null && bus.bus2?.plateNo !== undefined && bus.bus2.plateNo !== '')
+                    );
+                    // flag와 관계없이 실제 운행정보로만 판단
+                    return hasValidPredictTime || hasValidPlateNo;
+                  }).length})
+                </span>
               </button>
               
               <button
@@ -458,15 +492,120 @@ function StationDetailContent() {
               </div>
             ) : (
               <div className="space-y-4">
-                {busArrivals.map((busRoute) => (
-                  <BusArrivalItem
-                    key={busRoute.routeId}
-                    busRoute={busRoute}
-                    stationId={stationId}
-                    stationName={stationInfo?.stationName || stationInfo?.name || `정류장 ${stationId}`}
-                    onRouteClick={handleRouteClick}
-                  />
-                ))}
+                {/* 운행 중인 버스와 운행하지 않는 버스를 구분하여 표시 */}
+                {(() => {
+                  // 버스를 운행 상태에 따라 분류
+                  const activeBuses = [];
+                  const inactiveBuses = [];
+                  
+                  busArrivals.forEach((busRoute) => {
+                    // 운행 중인 버스 판별 기준:
+                    // flag와 관계없이 실제 운행 정보로 판단
+                    // 1. bus1.predictTime 또는 bus2.predictTime이 존재하고 0보다 큰 경우
+                    // 2. 또는 bus1.plateNo 또는 bus2.plateNo가 존재하는 경우 (실제 운행 중인 버스)
+                    const hasValidPredictTime = (
+                      (busRoute.bus1?.predictTime !== null && busRoute.bus1?.predictTime !== undefined && busRoute.bus1.predictTime > 0) ||
+                      (busRoute.bus2?.predictTime !== null && busRoute.bus2?.predictTime !== undefined && busRoute.bus2.predictTime > 0)
+                    );
+                    
+                    const hasValidPlateNo = (
+                      (busRoute.bus1?.plateNo !== null && busRoute.bus1?.plateNo !== undefined && busRoute.bus1.plateNo !== '') ||
+                      (busRoute.bus2?.plateNo !== null && busRoute.bus2?.plateNo !== undefined && busRoute.bus2.plateNo !== '')
+                    );
+                    
+                    // flag는 참고용으로만 로그에 출력, 실제 판단에는 사용하지 않음
+                    const hasArrivalInfo = hasValidPredictTime || hasValidPlateNo;
+                    
+                    console.log(`🔍 버스 ${busRoute.routeName} 판별:`, {
+                      flag: busRoute.flag,
+                      bus1: busRoute.bus1,
+                      bus2: busRoute.bus2,
+                      hasValidPredictTime,
+                      hasValidPlateNo,
+                      hasArrivalInfo,
+                      reason: hasArrivalInfo ? '운행 중' : '운행 종료',
+                      note: 'flag는 판단에 사용하지 않음, 실제 운행정보로만 판단'
+                    });
+                    
+                    if (hasArrivalInfo) {
+                      activeBuses.push(busRoute);
+                    } else {
+                      inactiveBuses.push(busRoute);
+                    }
+                  });
+                  
+                  // 운행 중인 버스는 도착 시간 순으로 정렬
+                  activeBuses.sort((a, b) => {
+                    const aTime = (a.bus1?.predictTime !== null && a.bus1?.predictTime > 0) ? a.bus1.predictTime : 
+                                  ((a.bus2?.predictTime !== null && a.bus2?.predictTime > 0) ? a.bus2.predictTime : 999);
+                    const bTime = (b.bus1?.predictTime !== null && b.bus1?.predictTime > 0) ? b.bus1.predictTime : 
+                                  ((b.bus2?.predictTime !== null && b.bus2?.predictTime > 0) ? b.bus2.predictTime : 999);
+                    return aTime - bTime;
+                  });
+                  
+                  // 운행하지 않는 버스는 노선 번호 순으로 정렬
+                  inactiveBuses.sort((a, b) => {
+                    const aRoute = parseInt(a.routeName) || parseInt(a.routeNumber) || 999999;
+                    const bRoute = parseInt(b.routeName) || parseInt(b.routeNumber) || 999999;
+                    return aRoute - bRoute;
+                  });
+                  
+                  console.log('📊 버스 분류 결과:', {
+                    전체버스수: busArrivals.length,
+                    운행중인버스: activeBuses.length,
+                    운행종료버스: inactiveBuses.length,
+                    운행중인버스목록: activeBuses.map(b => b.routeName),
+                    운행종료버스목록: inactiveBuses.map(b => b.routeName)
+                  });
+                  
+                  return (
+                    <>
+                      {/* 운행 중인 버스 */}
+                      {activeBuses.length > 0 && (
+                        <>
+                          <div className="flex items-center gap-2 mb-4">
+                            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                            <h3 className="text-lg font-semibold text-gray-900">
+                              운행 중인 버스 ({activeBuses.length}개)
+                            </h3>
+                          </div>
+                          {activeBuses.map((busRoute) => (
+                            <BusArrivalItem
+                              key={`active-${busRoute.routeId}`}
+                              busRoute={busRoute}
+                              stationId={stationId}
+                              stationName={stationInfo?.stationName || stationInfo?.name || `정류장 ${stationId}`}
+                              onRouteClick={handleRouteClick}
+                            />
+                          ))}
+                        </>
+                      )}
+                      
+                      {/* 운행하지 않는 버스 */}
+                      {inactiveBuses.length > 0 && (
+                        <>
+                          <div className="flex items-center gap-2 mb-4 mt-8">
+                            <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
+                            <h3 className="text-lg font-semibold text-gray-600">
+                              운행 종료된 버스 ({inactiveBuses.length}개)
+                            </h3>
+                          </div>
+                          <div className="space-y-4 opacity-60">
+                            {inactiveBuses.map((busRoute) => (
+                              <BusArrivalItem
+                                key={`inactive-${busRoute.routeId}`}
+                                busRoute={busRoute}
+                                stationId={stationId}
+                                stationName={stationInfo?.stationName || stationInfo?.name || `정류장 ${stationId}`}
+                                onRouteClick={handleRouteClick}
+                              />
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             )}
           </>

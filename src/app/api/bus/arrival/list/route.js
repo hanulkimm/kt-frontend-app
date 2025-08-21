@@ -73,7 +73,22 @@ export async function POST(request) {
     let data;
     try {
       data = JSON.parse(responseText);
-      console.log('공공데이터 정류장 버스 목록 API 응답 파싱 성공:', JSON.stringify(data, null, 2));
+      console.log('공공데이터 정류장 버스 목록 API 응답 파싱 성공');
+      // 각 버스별로 상세 정보 로그 출력
+      if (data.response?.msgBody?.busArrivalList) {
+        data.response.msgBody.busArrivalList.forEach((bus, index) => {
+          console.log(`🚌 원본 버스 ${index + 1} (${bus.routeName}):`, {
+            routeName: bus.routeName,
+            flag: bus.flag,
+            predictTime1: bus.predictTime1,
+            predictTime2: bus.predictTime2,
+            plateNo1: bus.plateNo1,
+            plateNo2: bus.plateNo2,
+            locationNo1: bus.locationNo1,
+            locationNo2: bus.locationNo2
+          });
+        });
+      }
     } catch (parseError) {
       console.error('JSON 파싱 오류:', parseError.message);
       console.error('응답이 JSON이 아닙니다. HTML 또는 다른 형식일 수 있습니다.');
@@ -95,6 +110,18 @@ export async function POST(request) {
       
       if (busArrivalList.length > 0) {
         // BusArrivalItem 컴포넌트와 호환되도록 데이터 구조 변환
+        // 빈 문자열을 null로 변환하는 헬퍼 함수
+        const parseValue = (value) => {
+          if (value === "" || value === null || value === undefined) {
+            return null;
+          }
+          // 숫자 문자열인 경우 숫자로 변환
+          if (typeof value === 'string' && !isNaN(value) && value.trim() !== '') {
+            return parseInt(value);
+          }
+          return value;
+        };
+
         const transformedData = busArrivalList.map(bus => ({
           routeId: bus.routeId,
           routeName: bus.routeName,
@@ -103,25 +130,36 @@ export async function POST(request) {
           flag: bus.flag,
           // 첫 번째 버스 정보 (현재 버스)
           bus1: {
-            plateNo: bus.plateNo1,
-            predictTime: bus.predictTime1,
-            crowded: bus.crowded1,
-            lowPlate: bus.lowPlate1,
-            remainSeatCnt: bus.remainSeatCnt1,
-            stationName: bus.locationNo1 ? `${bus.locationNo1}번째 전` : '',
-            locationNo: bus.locationNo1
+            plateNo: parseValue(bus.plateNo1),
+            predictTime: parseValue(bus.predictTime1),
+            crowded: parseValue(bus.crowded1),
+            lowPlate: parseValue(bus.lowPlate1),
+            remainSeatCnt: parseValue(bus.remainSeatCnt1),
+            stationName: parseValue(bus.locationNo1) ? `${parseValue(bus.locationNo1)}번째 전` : '',
+            locationNo: parseValue(bus.locationNo1)
           },
           // 두 번째 버스 정보 (다음 버스)
           bus2: {
-            plateNo: bus.plateNo2,
-            predictTime: bus.predictTime2,
-            crowded: bus.crowded2,
-            lowPlate: bus.lowPlate2,
-            remainSeatCnt: bus.remainSeatCnt2,
-            stationName: bus.locationNo2 ? `${bus.locationNo2}번째 전` : '',
-            locationNo: bus.locationNo2
+            plateNo: parseValue(bus.plateNo2),
+            predictTime: parseValue(bus.predictTime2),
+            crowded: parseValue(bus.crowded2),
+            lowPlate: parseValue(bus.lowPlate2),
+            remainSeatCnt: parseValue(bus.remainSeatCnt2),
+            stationName: parseValue(bus.locationNo2) ? `${parseValue(bus.locationNo2)}번째 전` : '',
+            locationNo: parseValue(bus.locationNo2)
           }
         }));
+
+        // 변환된 데이터도 로그로 출력
+        console.log('🔄 변환된 데이터:');
+        transformedData.forEach((bus, index) => {
+          console.log(`🚌 변환된 버스 ${index + 1} (${bus.routeName}):`, {
+            routeName: bus.routeName,
+            flag: bus.flag,
+            bus1: bus.bus1,
+            bus2: bus.bus2
+          });
+        });
 
         return NextResponse.json({
           success: true,
